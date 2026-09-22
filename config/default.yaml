@@ -1,0 +1,31 @@
+project:
+  name: quantitative-fx-research
+  mode: research_only
+
+timeframes:
+  regime: 1h
+  context: 4h
+  signal: 5m
+  execution: 1m
+
+risk:
+  max_risk_per_trade: 0.0025
+  max_daily_loss: 0.01
+  max_portfolio_drawdown: 0.15
+  max_gross_leverage: 2.0
+  max_currency_exposure: 0.25
+
+execution:
+  include_spread: true
+  include_commission: true
+  include_slippage: true
+  include_latency: true
+  model_partial_fills: true
+  limit_order_timeout_seconds: 30
+
+validation:
+  method: anchored_walk_forward
+  final_test_is_locked: true
+  minimum_stress_cost_multiplier: 2.0
+  paper_trade_before_live: true
+

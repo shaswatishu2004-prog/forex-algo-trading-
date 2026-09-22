@@ -1,0 +1,49 @@
+# Quantitative FX Research Engine
+
+Research repository for a multi-timeframe, regime-aware, machine-learning FX strategy.
+
+> **Status: research prototype.** This repository is not investment advice and is not live-trading ready. No profitability or drawdown target is guaranteed.
+
+## Research objective
+
+Test whether a small predictive edge survives realistic FX execution costs, latency, slippage, financing, regime changes, and portfolio risk constraints.
+
+## Proposed architecture
+
+1. **Data layer** — timestamped bid/ask prices, volume where available, macro releases, rates, and broker metadata.
+2. **Feature layer** — returns, volatility, cross-currency relationships, rate differentials, and strictly point-in-time features.
+3. **Regime layer** — higher-timeframe filtered regime probabilities; no look-ahead smoothing in live-equivalent tests.
+4. **Prediction layer** — simple baselines first, then stacked models and graph models only if they add out-of-sample value.
+5. **Portfolio layer** — volatility scaling, currency exposure constraints, correlation limits, and portfolio-level risk budgets.
+6. **Execution layer** — bid/ask fills, dynamic spread, slippage, latency, partial fills, rejected orders, and order cancellation.
+7. **Risk layer** — per-trade risk, daily loss limits, exposure caps, news/market-data safeguards, and an independent kill switch.
+
+## Non-negotiable validation rules
+
+- Split data chronologically; never randomly shuffle time series.
+- Fit feature selection, scaling, regime models, and hyperparameters inside each training window.
+- Keep a final untouched test period.
+- Report gross and net results separately.
+- Use bid/ask data and timestamped feature availability.
+- Stress-test costs, latency, missing data, and correlated losses.
+- Record every experiment and rejected configuration.
+
+## Quick start
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+pytest
+```
+
+The repository currently contains research contracts and risk/cost utilities. Data connectors, model training, and broker adapters should be added only after the test protocol is fixed.
+
+## Repository map
+
+- [`docs/strategy-spec.md`](docs/strategy-spec.md) — detailed strategy specification and failure modes
+- [`config/default.yaml`](config/default.yaml) — conservative research defaults
+- [`src/fx_strategy/costs.py`](src/fx_strategy/costs.py) — transparent transaction-cost calculations
+- [`src/fx_strategy/risk.py`](src/fx_strategy/risk.py) — position sizing and drawdown controls
+- [`tests/`](tests/) — unit tests for the safety-critical utilities
+
