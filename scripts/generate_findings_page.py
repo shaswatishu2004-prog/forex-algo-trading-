@@ -31,6 +31,23 @@ STATE_CLASS = {
 }
 REPO_URL = "https://github.com/shaswatishu2004-prog/forex-algo-trading-"
 
+NAV = """<nav class="nav" aria-label="Primary">
+    <div class="nav-inner">
+      <a class="brand" href="index.html">FX ALGO <span>RESEARCH</span></a>
+      <div class="nav-links">
+        <a href="index.html#strategy">Strategy</a>
+        <a href="index.html#data">Data</a>
+        <a href="index.html#build">Build</a>
+        <a href="index.html#tools">Tools</a>
+        <a href="index.html#gates">Gates</a>
+      </div>
+      <div class="nav-actions">
+        <a class="btn btn-primary" href="findings.html">Findings</a>
+        <a class="btn btn-ghost" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-" target="_blank" rel="noreferrer">Repository</a>
+      </div>
+    </div>
+  </nav>"""
+
 
 # ---------------------------------------------------------------- loading
 
@@ -898,6 +915,7 @@ def build_page(bars: pd.DataFrame, stats: list[dict]) -> str:
   <link rel="stylesheet" href="findings.css">
 </head>
 <body>
+  {NAV}
   <header class="topbar">
     <div>
       <p class="eyebrow">DATA FINDINGS</p>

@@ -3,170 +3,251 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Research dashboard for a cost-aware, regime-aware quantitative FX strategy.">
-  <title>Quantitative FX Research Dashboard</title>
+  <meta name="description" content="Research dashboard for an institutional VWAP and four-state regime strategy on EURUSD, XAUUSD, and DXY.">
+  <title>Institutional VWAP research dashboard | Quantitative FX Research</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <nav class="nav" aria-label="Primary">
+    <div class="nav-inner">
+      <a class="brand" href="index.html">FX ALGO <span>RESEARCH</span></a>
+      <div class="nav-links">
+        <a href="index.html#strategy">Strategy</a>
+        <a href="index.html#data">Data</a>
+        <a href="index.html#build">Build</a>
+        <a href="index.html#tools">Tools</a>
+        <a href="index.html#gates">Gates</a>
+      </div>
+      <div class="nav-actions">
+        <a class="btn btn-primary" href="findings.html">Findings</a>
+        <a class="btn btn-ghost" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-" target="_blank" rel="noreferrer">Repository</a>
+      </div>
+    </div>
+  </nav>
+
   <header class="topbar">
     <div>
       <p class="eyebrow">FOREX ALGORITHMIC RESEARCH</p>
-      <h1>Quantitative FX Research Dashboard</h1>
+      <h1>Institutional VWAP signal engine</h1>
       <p class="subtitle">A transparent control room for testing whether a small predictive edge survives real execution costs and risk.</p>
     </div>
     <span class="status-pill">RESEARCH PROTOTYPE</span>
   </header>
 
   <main>
+    <ul class="meta-strip" aria-label="Repository status">
+      <li><b>106,394</b> bars staged</li>
+      <li><b>30</b> dates of 1m history</li>
+      <li><b>4 / 12</b> decisions resolved</li>
+      <li class="warn"><b>0</b> trades taken</li>
+    </ul>
+
     <section class="notice" aria-label="Important warning">
       <strong>Research-only view.</strong> Values shown here are assumptions and scenario calculations, not live trading results or investment advice. No broker credentials or market-data feeds are connected.
     </section>
 
-    <section class="kpi-grid" aria-label="Strategy summary">
-      <article class="kpi"><span>Model objective</span><strong>Positive net expectancy</strong><small>After spread, slippage, latency, and financing</small></article>
-      <article class="kpi"><span>Primary edge risk</span><strong>Cost sensitivity</strong><small>Small gross edges can disappear at lower timeframes</small></article>
-      <article class="kpi"><span>Historical warning</span><strong>20–41% drawdown</strong><small>Reported in the handoff; not a future limit</small></article>
-      <article class="kpi"><span>Deployment state</span><strong>Not live-ready</strong><small>Requires walk-forward and paper-trading evidence</small></article>
+    <section class="kpi-grid" aria-label="At a glance">
+      <article class="kpi"><span>Staged data</span><strong>106,394 bars</strong><small>Six series: EURUSD, XAUUSD, and DXY on 1d and 1m</small></article>
+      <article class="kpi"><span>Open decisions</span><strong>8 open</strong><small>4 ready now, 4 blocked downstream</small></article>
+      <article class="kpi"><span>Backtest status</span><strong class="warn">Not run</strong><small>The backtest design ticket waits on three decisions</small></article>
+      <article class="kpi"><span>Live accuracy</span><strong class="warn">Not measured</strong><small>0 trades taken, no feed connected</small></article>
     </section>
 
-    <section class="grid two-col">
-      <article class="panel">
-        <div class="panel-heading"><div><p class="eyebrow">SYSTEM MAP</p><h2>Research pipeline</h2></div><span class="panel-tag">7 layers</span></div>
-        <div class="pipeline" aria-label="Strategy pipeline">
-          <div class="step"><b>01</b><span>Data</span><small>Point-in-time bid/ask and macro data</small></div>
-          <div class="step"><b>02</b><span>Features</span><small>Returns, volatility, rates, cross-currency links</small></div>
-          <div class="step"><b>03</b><span>Regime</span><small>Filtered higher-timeframe state probabilities</small></div>
-          <div class="step"><b>04</b><span>Prediction</span><small>Baselines before stacking or GNNs</small></div>
-          <div class="step"><b>05</b><span>Portfolio</span><small>Exposure, correlation, and volatility scaling</small></div>
-          <div class="step"><b>06</b><span>Execution</span><small>Spread, latency, slippage, partial fills</small></div>
-          <div class="step"><b>07</b><span>Risk</span><small>Daily halt and independent kill switch</small></div>
-        </div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-heading"><div><p class="eyebrow">DECISION GATES</p><h2>What must be true</h2></div></div>
-        <ul class="gate-list">
-          <li><span class="gate-dot amber"></span><div><b>Data integrity</b><small>No look-ahead, revised-data leakage, or timestamp mismatch.</small></div></li>
-          <li><span class="gate-dot blue"></span><div><b>Net profitability</b><small>Gross and net returns remain positive under stressed costs.</small></div></li>
-          <li><span class="gate-dot green"></span><div><b>Risk containment</b><small>Position sizing and halts operate independently of the model.</small></div></li>
-          <li><span class="gate-dot red"></span><div><b>Live equivalence</b><small>Paper fills resemble the backtest before capital is scaled.</small></div></li>
-        </ul>
-        <div class="mini-meter"><div class="meter-label"><span>Evidence completeness</span><b>Prototype</b></div><div class="meter"><i style="width: 28%"></i></div><small>Currently a research scaffold, not a validated performance report.</small></div>
-      </article>
-    </section>
-
-    <section class="grid two-col">
-      <article class="panel">
-        <div class="panel-heading"><div><p class="eyebrow">ACTIVE STRATEGY</p><h2>Institutional VWAP bands</h2></div><span class="panel-tag">1m timeframe</span></div>
-        <ul class="gate-list">
-          <li><span class="gate-dot blue"></span><div><b>Anchored VWAP</b><small>Typical price (H+L+C)/3 weighted across the anchor window and recomputed every minute.</small></div></li>
-          <li><span class="gate-dot green"></span><div><b>1-sigma and 3-sigma bands</b><small>Each band plots VWAP plus or minus one and three weighted standard deviations, reset with the anchor.</small></div></li>
-          <li><span class="gate-dot amber"></span><div><b>Volume weights</b><small>Gold futures use reported COMEX volume. EURUSD and DXY use a synthetic activity weight, because spot FX and the index publish no volume.</small></div></li>
-          <li><span class="gate-dot red"></span><div><b>Anchor window</b><small>UTC midnight daily for now. The institutional 21:00 UTC session reset is the open alternative.</small></div></li>
-        </ul>
-      </article>
-
-      <article class="panel">
-        <div class="panel-heading"><div><p class="eyebrow">REGIME CHANNEL</p><h2>Four-state daily labels</h2></div><span class="panel-tag">1d timeframe</span></div>
-        <div class="timeframe-table">
-          <div class="tf-head"><span>State</span><span>Rule</span><span>Threshold</span></div>
-          <div><strong>Uptrend</strong><span>ADX with DI direction and EMA slope</span><em>≥ 25</em></div>
-          <div><strong>Downtrend</strong><span>Mirror of the trend rule</span><em>≥ 25</em></div>
-          <div><strong>High volatility</strong><span>ATR percentile, trailing 252 bars</span><em>≥ 70</em></div>
-          <div><strong>Low volatility</strong><span>ATR percentile, trailing 252 bars</span><em>≤ 30</em></div>
-        </div>
-        <p class="caption">Labels use only data available at bar close, and signals trade from the next open. Volatility states take priority over trend, so every bar carries exactly one label. See <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/vwap-regime-research.md">vwap-regime-research.md</a> for formulas and sources.</p>
-      </article>
-    </section>
-
-    <section class="grid two-col">
-      <article class="panel">
-        <div class="panel-heading"><div><p class="eyebrow">DATA LAYER</p><h2>Staged historical data</h2></div><span class="panel-tag">106,394 bars</span></div>
-        <div class="timeframe-table">
-          <div class="tf-head"><span>Symbol</span><span>Daily history</span><span>Minute history</span></div>
-          <div><strong>EURUSD</strong><span>5,918 bars from Dec 2003</span><em>28,388 bars, no volume</em></div>
-          <div><strong>XAUUSD</strong><span>6,540 bars from Aug 2000</span><em>25,798 bars, real volume</em></div>
-          <div><strong>DXY</strong><span>14,148 bars from Jan 1971</span><em>25,602 bars, no volume</em></div>
-        </div>
-        <p class="caption">Minute gaps are weekends and one holiday. Volume exists only on the gold futures contract, which makes the synthetic weight mandatory rather than optional. The <a href="findings.html">data findings page</a> charts all six series, and <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/minute-data-sources-research.md">minute-data-sources-research.md</a> compares the sources.</p>
-      </article>
-
-      <article class="panel">
-        <div class="panel-heading"><div><p class="eyebrow">SIGNAL OUTPUT</p><h2>JSON signal files</h2></div><span class="panel-tag">Planned</span></div>
-        <ul class="gate-list">
-          <li><span class="gate-dot blue"></span><div><b>Candidate fields</b><small>Symbol, timeframe, timestamp, signal type, direction, VWAP and band values, regime state, strength, schema version.</small></div></li>
-          <li><span class="gate-dot amber"></span><div><b>Open decisions</b><small>File naming, what one file holds, and whether a signal needs both a band touch and an agreeing regime.</small></div></li>
-          <li><span class="gate-dot green"></span><div><b>Backtest reporting</b><small>Simulated trades run through the cost and risk modules and report gross and net results against the strategy spec.</small></div></li>
-        </ul>
-        <p class="caption">A new subfolder will hold the signal JSON output. Its layout follows the schema decision.</p>
-      </article>
-    </section>
-
-    <section class="grid two-col">
-      <article class="panel calculator">
-        <div class="panel-heading"><div><p class="eyebrow">INTERACTIVE SCENARIO</p><h2>Cost survival test</h2></div><span class="panel-tag">Per trade</span></div>
-        <div class="form-grid">
-          <label>Gross return (%)<input id="grossReturn" type="number" value="0.0119" step="0.001" min="-10"></label>
-          <label>Spread (pips)<input id="spreadPips" type="number" value="1.0" step="0.1" min="0"></label>
-          <label>Pair price<input id="pairPrice" type="number" value="1.08" step="0.01" min="0.0001"></label>
-          <label>Commission (%)<input id="commission" type="number" value="0.002" step="0.001" min="0"></label>
-          <label>Slippage (%)<input id="slippage" type="number" value="0.003" step="0.001" min="0"></label>
-          <label>Financing (%)<input id="financing" type="number" value="0" step="0.001" min="0"></label>
-        </div>
-        <div class="result" aria-live="polite"><span>Estimated net return</span><strong id="netReturn">—</strong><small id="costMessage">Enter assumptions to calculate.</small></div>
-      </article>
-
-      <article class="panel calculator">
-        <div class="panel-heading"><div><p class="eyebrow">RISK ENGINE</p><h2>Position sizing</h2></div><span class="panel-tag">Fractional risk</span></div>
-        <div class="form-grid">
-          <label>Account equity<input id="equity" type="number" value="10000" step="100" min="1"></label>
-          <label>Risk per trade (%)<input id="riskPct" type="number" value="0.25" step="0.05" min="0.01"></label>
-          <label>Stop distance (%)<input id="stopPct" type="number" value="0.50" step="0.05" min="0.01"></label>
-          <label>Max daily loss (%)<input id="dailyLoss" type="number" value="1.00" step="0.1" min="0.1"></label>
-        </div>
-        <div class="result" aria-live="polite"><span>Illustrative position notional</span><strong id="notional">—</strong><small id="riskMessage">Sizing assumes the stop fills as modelled; real slippage can exceed it.</small></div>
-      </article>
-    </section>
-
-    <section class="grid two-col">
-      <article class="panel">
-        <div class="panel-heading"><div><p class="eyebrow">DRAWDOWN LENS</p><h2>Recovery asymmetry</h2></div><span class="panel-tag">Historical scenarios</span></div>
-        <div class="drawdown-chart" role="img" aria-label="Drawdown recovery requirements">
-          <div class="bar-row"><span>20%</span><div class="bar-track"><i style="width: 36%"></i></div><b>25.0% recovery</b></div>
-          <div class="bar-row"><span>30%</span><div class="bar-track"><i style="width: 61%"></i></div><b>42.9% recovery</b></div>
-          <div class="bar-row"><span>41%</span><div class="bar-track"><i class="danger" style="width: 100%"></i></div><b>69.5% recovery</b></div>
-          <div class="bar-row"><span>50%</span><div class="bar-track"><i class="danger" style="width: 100%"></i></div><b>100.0% recovery</b></div>
-        </div>
-        <p class="caption">A historical maximum drawdown is an observation, not a ceiling. Leverage, correlated losses, gaps, and execution failure can produce a larger live drawdown.</p>
-      </article>
-
-      <article class="panel">
-        <div class="panel-heading"><div><p class="eyebrow">TIMEFRAME POLICY</p><h2>Where each model belongs</h2></div></div>
-        <div class="timeframe-table">
-          <div class="tf-head"><span>Timeframe</span><span>Role</span><span>Primary risk</span></div>
-          <div><strong>4h / 1h</strong><span>Context and regime</span><em>Regime lag</em></div>
-          <div><strong>5m</strong><span>Setup confirmation</span><em>Whipsaw</em></div>
-          <div><strong>1m</strong><span>Entry and execution</span><em>Microstructure cost</em></div>
-        </div>
-        <p class="caption">Lower timeframes should refine execution, not carry the full burden of directional prediction. The VWAP build in progress labels regime on daily bars and draws bands on 1-minute bars.</p>
-      </article>
-    </section>
-
-    <section class="panel full-width">
-      <div class="panel-heading"><div><p class="eyebrow">RESEARCH CHECKLIST</p><h2>Before any live capital</h2></div><span class="panel-tag">Go / no-go</span></div>
-      <div class="check-grid">
-        <label><input type="checkbox"> Chronological walk-forward split</label>
-        <label><input type="checkbox"> Bid/ask and realistic fills</label>
-        <label><input type="checkbox"> Final test period locked</label>
-        <label><input type="checkbox"> Cost stress test ≥ 2×</label>
-        <label><input type="checkbox"> Paper-trading evidence</label>
-        <label><input type="checkbox"> Independent kill switch</label>
+    <section class="band" id="strategy">
+      <div class="band-head">
+        <p class="eyebrow">STRATEGY</p>
+        <h2 class="band-title">How a signal is defined</h2>
+        <span class="band-note">Research resolved: band math and regime rules</span>
       </div>
-      <div class="footer-note">The dashboard is intentionally conservative: a green-looking scenario is not evidence of a profitable strategy.</div>
+      <div class="grid two-col">
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">ACTIVE STRATEGY</p><h3>Institutional VWAP bands</h3></div><span class="panel-tag">1m timeframe</span></div>
+          <ul class="gate-list">
+            <li><span class="gate-dot blue"></span><div><b>Anchored VWAP</b><small>Typical price (H+L+C)/3 weighted across the anchor window and recomputed every minute.</small></div></li>
+            <li><span class="gate-dot blue"></span><div><b>1-sigma and 3-sigma bands</b><small>Each band plots VWAP plus or minus one and three weighted standard deviations, reset with the anchor.</small></div></li>
+            <li><span class="gate-dot amber"></span><div><b>Volume weights</b><small>Gold futures use reported COMEX volume. EURUSD and DXY use a synthetic activity weight, because spot FX and the index publish no volume.</small></div></li>
+            <li><span class="gate-dot amber"></span><div><b>Anchor window</b><small>UTC midnight daily for now. The institutional 21:00 UTC session reset is the open alternative.</small></div></li>
+          </ul>
+          <div class="formula-strip" aria-label="Core formulas">
+            <code>VWAP = sum(w * p) / sum(w)</code>
+            <code>sigma = sqrt(sum(w * (p - VWAP)^2) / sum(w))</code>
+            <code>bands = VWAP +/- {1 sigma, 3 sigma}</code>
+          </div>
+          <p class="caption">Daily bars carry the regime label, 1-minute bars carry the bands, where microstructure cost matters most. Formulas and sources live in <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/vwap-regime-research.md">vwap-regime-research.md</a>.</p>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">REGIME CHANNEL</p><h3>Four-state daily labels</h3></div><span class="panel-tag">1d timeframe</span></div>
+          <div class="timeframe-table">
+            <div class="tf-head"><span>State</span><span>Rule</span><span>Threshold</span></div>
+            <div><strong><i class="state-dot up"></i>Uptrend</strong><span>ADX with DI direction and EMA slope</span><em>&ge; 25</em></div>
+            <div><strong><i class="state-dot down"></i>Downtrend</strong><span>Mirror of the trend rule</span><em>&ge; 25</em></div>
+            <div><strong><i class="state-dot high"></i>High volatility</strong><span>ATR percentile, trailing 252 bars</span><em>&ge; 70</em></div>
+            <div><strong><i class="state-dot low"></i>Low volatility</strong><span>ATR percentile, trailing 252 bars</span><em>&le; 30</em></div>
+          </div>
+          <p class="caption">Labels use only data available at bar close, and signals trade from the next open. Volatility states take priority over trend, so every bar carries exactly one label. See <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/vwap-regime-research.md">vwap-regime-research.md</a> for formulas and sources.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="band" id="data">
+      <div class="band-head">
+        <p class="eyebrow">DATA</p>
+        <h2 class="band-title">What the staged data supports</h2>
+        <span class="band-note">SQLite, one ohlcv table</span>
+      </div>
+      <div class="grid two-col">
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">DATA LAYER</p><h3>Staged historical data</h3></div><span class="panel-tag">106,394 bars</span></div>
+          <div class="timeframe-table">
+            <div class="tf-head"><span>Symbol</span><span>Daily history</span><span>Minute history</span></div>
+            <div><strong>EURUSD</strong><span>5,918 bars from Dec 2003</span><em>28,388 bars, no volume</em></div>
+            <div><strong>XAUUSD</strong><span>6,540 bars from Aug 2000</span><em>25,798 bars, real volume</em></div>
+            <div><strong>DXY</strong><span>14,148 bars from Jan 1971</span><em>25,602 bars, no volume</em></div>
+          </div>
+          <p class="caption">Minute gaps are weekends and one holiday. Volume exists only on the gold futures contract, which makes the synthetic weight mandatory rather than optional.</p>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">EVIDENCE</p><h3>Research and findings</h3></div><span class="panel-tag">4 documents</span></div>
+          <div class="link-list">
+            <a class="link-card" href="findings.html"><span><b>Data findings page</b><small>Eight charts computed from the staged database: counts, gaps, VWAP bands, regime labels, offsets.</small></span><span class="arrow">&rarr;</span></a>
+            <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/vwap-regime-research.md" target="_blank" rel="noreferrer"><span><b>vwap-regime-research.md</b><small>VWAP formulas, weighted sigma, and the four regime thresholds with sources.</small></span><span class="arrow">&rarr;</span></a>
+            <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/minute-data-sources-research.md" target="_blank" rel="noreferrer"><span><b>minute-data-sources-research.md</b><small>HistData primary, OANDA backup, and five sources ruled out with reasons.</small></span><span class="arrow">&rarr;</span></a>
+            <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer"><span><b>Wayfinder map</b><small>Destination, four resolved decisions, and the open frontier.</small></span><span class="arrow">&rarr;</span></a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="band" id="build">
+      <div class="band-head">
+        <p class="eyebrow">BUILD</p>
+        <h2 class="band-title">What is built and what is open</h2>
+        <span class="band-note">Pipeline status from the repository</span>
+      </div>
+      <div class="grid two-col">
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">SYSTEM MAP</p><h3>Research pipeline</h3></div><span class="panel-tag">7 layers</span></div>
+          <div class="pipeline" aria-label="Strategy pipeline">
+            <div class="step"><div class="step-top"><b>01</b><span class="chip">Staged</span></div><span>Data</span><small>Point-in-time price history in SQLite, 106,394 bars.</small></div>
+            <div class="step"><div class="step-top"><b>02</b><span class="chip mute">Planned</span></div><span>Features</span><small>Returns, volatility, rates, cross-currency links.</small></div>
+            <div class="step"><div class="step-top"><b>03</b><span class="chip">Specified</span></div><span>Regime</span><small>Four-state daily labels, rules resolved in research.</small></div>
+            <div class="step"><div class="step-top"><b>04</b><span class="chip mute">Out of scope</span></div><span>Prediction</span><small>Machine learning sits outside this map on purpose.</small></div>
+            <div class="step"><div class="step-top"><b>05</b><span class="chip mute">Unspecified</span></div><span>Portfolio</span><small>How symbols aggregate is not yet specified.</small></div>
+            <div class="step"><div class="step-top"><b>06</b><span class="chip">Coded</span></div><span>Execution</span><small>Spread, commission, slippage, and financing cost model.</small></div>
+            <div class="step"><div class="step-top"><b>07</b><span class="chip">Coded</span></div><span>Risk</span><small>Risk limits for risk per trade, daily loss, and drawdown.</small></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">OPEN DECISIONS</p><h3>Wayfinder frontier</h3></div><span class="panel-tag">8 open</span></div>
+          <p class="sub">Ready now</p>
+          <ul class="decision-list">
+            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/anchor-time-conflict.md" target="_blank" rel="noreferrer">Anchor time conflict</a></b><small>UTC midnight against the research recommendation of 21:00 UTC. Blocks the visual prototype.</small></div></li>
+            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/history-depth.md" target="_blank" rel="noreferrer">History depth</a></b><small>How much of the deeper HistData 1m history to adopt beyond the 29-day window.</small></div></li>
+            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/engine-folder-layout.md" target="_blank" rel="noreferrer">Engine folder layout</a></b><small>Where the analysis engine lives inside the package.</small></div></li>
+            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/cleaning-rules.md" target="_blank" rel="noreferrer">Cleaning rules</a></b><small>Turns staged raw bars into analysis-ready bars, starting with UTC timestamp normalization.</small></div></li>
+          </ul>
+          <p class="sub">Blocked downstream</p>
+          <div class="blocked-row">
+            <span class="chip mute">Visual prototype</span>
+            <span class="chip mute">Signal combination rule</span>
+            <span class="chip mute">Signals JSON schema</span>
+            <span class="chip mute">Backtest design</span>
+          </div>
+          <p class="caption">The signals JSON schema ticket carries the candidate fields, and a new subfolder holds the output once the schema lands.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="band" id="tools">
+      <div class="band-head">
+        <p class="eyebrow">TOOLS</p>
+        <h2 class="band-title">Test the assumptions yourself</h2>
+        <span class="band-note">Calculators run in the browser, nothing is stored</span>
+      </div>
+      <div class="grid two-col">
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">INTERACTIVE SCENARIO</p><h3>Cost survival test</h3></div><span class="panel-tag">Per trade</span></div>
+          <div class="form-grid">
+            <label>Gross return (%)<input id="grossReturn" type="number" value="0.0119" step="0.001" min="-10"></label>
+            <label>Spread (pips)<input id="spreadPips" type="number" value="1.0" step="0.1" min="0"></label>
+            <label>Pair price<input id="pairPrice" type="number" value="1.08" step="0.01" min="0.0001"></label>
+            <label>Commission (%)<input id="commission" type="number" value="0.002" step="0.001" min="0"></label>
+            <label>Slippage (%)<input id="slippage" type="number" value="0.003" step="0.001" min="0"></label>
+            <label>Financing (%)<input id="financing" type="number" value="0" step="0.001" min="0"></label>
+          </div>
+          <div class="result" aria-live="polite"><span>Estimated net return</span><strong id="netReturn">--</strong><small id="costMessage">Enter assumptions to calculate.</small></div>
+          <p class="caption">The primary risk to this edge is cost sensitivity: a small gross edge disappears at lower timeframes as spread and slippage grow.</p>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">RISK ENGINE</p><h3>Position sizing</h3></div><span class="panel-tag">Fractional risk</span></div>
+          <div class="form-grid">
+            <label>Account equity<input id="equity" type="number" value="10000" step="100" min="1"></label>
+            <label>Risk per trade (%)<input id="riskPct" type="number" value="0.25" step="0.05" min="0.01"></label>
+            <label>Stop distance (%)<input id="stopPct" type="number" value="0.50" step="0.05" min="0.01"></label>
+            <label>Max daily loss (%)<input id="dailyLoss" type="number" value="1.00" step="0.1" min="0.1"></label>
+          </div>
+          <div class="result" aria-live="polite"><span>Illustrative position notional</span><strong id="notional">--</strong><small id="riskMessage">Sizing assumes the stop fills as modelled; real slippage can exceed it.</small></div>
+          <p class="caption">The handoff reported a 20 to 41 percent drawdown range. Sizing a stop that never slips is the optimistic half of the trade.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="band" id="gates">
+      <div class="band-head">
+        <p class="eyebrow">GO / NO-GO</p>
+        <h2 class="band-title">What must be true before capital</h2>
+        <span class="band-note">Evidence completeness: prototype</span>
+      </div>
+      <div class="grid two-col">
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">DECISION GATES</p><h3>Four gates</h3></div></div>
+          <ul class="gate-list">
+            <li><span class="gate-dot amber"></span><div><b>Data integrity</b><small>No look-ahead, revised-data leakage, or timestamp mismatch.</small></div></li>
+            <li><span class="gate-dot blue"></span><div><b>Net profitability</b><small>Gross and net returns remain positive under stressed costs.</small></div></li>
+            <li><span class="gate-dot green"></span><div><b>Risk containment</b><small>Position sizing and halts operate independently of the model.</small></div></li>
+            <li><span class="gate-dot red"></span><div><b>Live equivalence</b><small>Paper fills resemble the backtest before capital is scaled.</small></div></li>
+          </ul>
+          <div class="mini-meter"><div class="meter-label"><span>Evidence completeness</span><b>Prototype</b></div><div class="meter"><i style="width: 28%"></i></div><small>Currently a research scaffold, not a validated performance report.</small></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">DRAWDOWN LENS</p><h3>Recovery asymmetry</h3></div><span class="panel-tag">Historical scenarios</span></div>
+          <div class="drawdown-chart" role="img" aria-label="Drawdown recovery requirements">
+            <div class="bar-row"><span>20%</span><div class="bar-track"><i style="width: 36%"></i></div><b>25.0% recovery</b></div>
+            <div class="bar-row"><span>30%</span><div class="bar-track"><i style="width: 61%"></i></div><b>42.9% recovery</b></div>
+            <div class="bar-row"><span>41%</span><div class="bar-track"><i class="danger" style="width: 100%"></i></div><b>69.5% recovery</b></div>
+            <div class="bar-row"><span>50%</span><div class="bar-track"><i class="danger" style="width: 100%"></i></div><b>100.0% recovery</b></div>
+          </div>
+          <p class="caption">A historical maximum drawdown is an observation, not a ceiling. Leverage, correlated losses, gaps, and execution failure can produce a larger live drawdown.</p>
+        </article>
+      </div>
+
+      <section class="panel full-width">
+        <div class="panel-heading"><div><p class="eyebrow">RESEARCH CHECKLIST</p><h3>Evidence checklist</h3></div><span class="panel-tag">6 items</span></div>
+        <div class="check-grid">
+          <label><input type="checkbox"> Chronological walk-forward split</label>
+          <label><input type="checkbox"> Bid/ask and realistic fills</label>
+          <label><input type="checkbox"> Final test period locked</label>
+          <label><input type="checkbox"> Cost stress test &ge; 2&times;</label>
+          <label><input type="checkbox"> Paper-trading evidence</label>
+          <label><input type="checkbox"> Independent kill switch</label>
+        </div>
+        <div class="footer-note">The dashboard is intentionally conservative: a green-looking scenario is not evidence of a profitable strategy.</div>
+      </section>
     </section>
   </main>
 
-  <footer>Quantitative FX Research Engine · Public research prototype · <a href="findings.html">Data findings</a> · <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-" target="_blank" rel="noreferrer">View repository</a></footer>
+  <footer>
+    <span>Quantitative FX Research Engine</span>
+    <span>Public research prototype</span>
+    <a href="findings.html">Data findings</a>
+    <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer">Wayfinder map</a>
+    <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-" target="_blank" rel="noreferrer">Repository</a>
+  </footer>
   <script src="app.js"></script>
 </body>
 </html>
