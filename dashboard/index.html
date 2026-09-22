@@ -56,6 +56,53 @@
     </section>
 
     <section class="grid two-col">
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">ACTIVE STRATEGY</p><h2>Institutional VWAP bands</h2></div><span class="panel-tag">1m timeframe</span></div>
+        <ul class="gate-list">
+          <li><span class="gate-dot blue"></span><div><b>Anchored VWAP</b><small>Typical price (H+L+C)/3 weighted across the anchor window and recomputed every minute.</small></div></li>
+          <li><span class="gate-dot green"></span><div><b>1-sigma and 3-sigma bands</b><small>Each band plots VWAP plus or minus one and three weighted standard deviations, reset with the anchor.</small></div></li>
+          <li><span class="gate-dot amber"></span><div><b>Volume weights</b><small>Gold futures use reported COMEX volume. EURUSD and DXY use a synthetic activity weight, because spot FX and the index publish no volume.</small></div></li>
+          <li><span class="gate-dot red"></span><div><b>Anchor window</b><small>UTC midnight daily for now. The institutional 21:00 UTC session reset is the open alternative.</small></div></li>
+        </ul>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">REGIME CHANNEL</p><h2>Four-state daily labels</h2></div><span class="panel-tag">1d timeframe</span></div>
+        <div class="timeframe-table">
+          <div class="tf-head"><span>State</span><span>Rule</span><span>Threshold</span></div>
+          <div><strong>Uptrend</strong><span>ADX with DI direction and EMA slope</span><em>≥ 25</em></div>
+          <div><strong>Downtrend</strong><span>Mirror of the trend rule</span><em>≥ 25</em></div>
+          <div><strong>High volatility</strong><span>ATR percentile, trailing 252 bars</span><em>≥ 70</em></div>
+          <div><strong>Low volatility</strong><span>ATR percentile, trailing 252 bars</span><em>≤ 30</em></div>
+        </div>
+        <p class="caption">Labels use only data available at bar close, and signals trade from the next open. Volatility states take priority over trend, so every bar carries exactly one label. See <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/vwap-regime-research.md">vwap-regime-research.md</a> for formulas and sources.</p>
+      </article>
+    </section>
+
+    <section class="grid two-col">
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">DATA LAYER</p><h2>Staged historical data</h2></div><span class="panel-tag">126,394 bars</span></div>
+        <div class="timeframe-table">
+          <div class="tf-head"><span>Symbol</span><span>Daily history</span><span>Minute history</span></div>
+          <div><strong>EURUSD</strong><span>5,918 bars from Dec 2003</span><em>28,388 bars, no volume</em></div>
+          <div><strong>XAUUSD</strong><span>6,540 bars from Aug 2000</span><em>25,798 bars, real volume</em></div>
+          <div><strong>DXY</strong><span>14,148 bars from Jan 1971</span><em>25,602 bars, no volume</em></div>
+        </div>
+        <p class="caption">Minute gaps are weekends and one holiday. Volume exists only on the gold futures contract, which makes the synthetic weight mandatory rather than optional. See <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/minute-data-sources-research.md">minute-data-sources-research.md</a> for the source comparison.</p>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">SIGNAL OUTPUT</p><h2>JSON signal files</h2></div><span class="panel-tag">Planned</span></div>
+        <ul class="gate-list">
+          <li><span class="gate-dot blue"></span><div><b>Candidate fields</b><small>Symbol, timeframe, timestamp, signal type, direction, VWAP and band values, regime state, strength, schema version.</small></div></li>
+          <li><span class="gate-dot amber"></span><div><b>Open decisions</b><small>File naming, what one file holds, and whether a signal needs both a band touch and an agreeing regime.</small></div></li>
+          <li><span class="gate-dot green"></span><div><b>Backtest reporting</b><small>Simulated trades run through the cost and risk modules and report gross and net results against the strategy spec.</small></div></li>
+        </ul>
+        <p class="caption">A new subfolder will hold the signal JSON output. Its layout follows the schema decision.</p>
+      </article>
+    </section>
+
+    <section class="grid two-col">
       <article class="panel calculator">
         <div class="panel-heading"><div><p class="eyebrow">INTERACTIVE SCENARIO</p><h2>Cost survival test</h2></div><span class="panel-tag">Per trade</span></div>
         <div class="form-grid">
@@ -101,7 +148,7 @@
           <div><strong>5m</strong><span>Setup confirmation</span><em>Whipsaw</em></div>
           <div><strong>1m</strong><span>Entry and execution</span><em>Microstructure cost</em></div>
         </div>
-        <p class="caption">Lower timeframes should refine execution, not carry the full burden of directional prediction.</p>
+        <p class="caption">Lower timeframes should refine execution, not carry the full burden of directional prediction. The VWAP build in progress labels regime on daily bars and draws bands on 1-minute bars.</p>
       </article>
     </section>
 
