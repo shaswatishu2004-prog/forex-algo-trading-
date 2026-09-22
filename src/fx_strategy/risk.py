@@ -35,5 +35,5 @@ def drawdown_from_peak(equity: float, peak_equity: float) -> float:
 
 def should_halt(equity: float, peak_equity: float, limits: RiskLimits) -> bool:
     """Independent portfolio halt condition."""
-    return drawdown_from_peak(equity, peak_equity) >= limits.max_drawdown
+    return round(drawdown_from_peak(equity, peak_equity), 7) >= limits.max_drawdown
 

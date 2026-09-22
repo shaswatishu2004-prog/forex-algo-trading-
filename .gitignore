@@ -12,4 +12,8 @@ data/raw/
 data/processed/
 artifacts/
 logs/
+data/*.db
+*.db
+*.sqlite
+*.sqlite3
 

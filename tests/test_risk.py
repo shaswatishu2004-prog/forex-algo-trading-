@@ -10,7 +10,7 @@ def test_position_sizing():
 
 def test_drawdown_and_halt():
     limits = RiskLimits(max_drawdown=0.2)
-    assert drawdown_from_peak(8_000, 10_000) == 0.2
+    assert drawdown_from_peak(8_000, 10_000) == pytest.approx(0.2)
     assert should_halt(8_000, 10_000, limits)
 
 

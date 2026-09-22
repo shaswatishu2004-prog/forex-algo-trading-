@@ -7,5 +7,5 @@ def test_pip_cost_conversion():
 
 def test_costs_are_subtracted():
     costs = TradeCosts(spread=0.0001, commission=0.00002, slippage=0.00003)
-    assert net_trade_return(0.001, costs) == 0.00085
+    assert round(net_trade_return(0.001, costs), 6) == 0.00085
 
