@@ -39,6 +39,10 @@ pytest
 
 The repository currently contains research contracts and risk/cost utilities. Data connectors, model training, and broker adapters should be added only after the test protocol is fixed.
 
+## Dashboard
+
+Open [`dashboard/index.html`](dashboard/index.html) directly in a browser, or enable GitHub Pages for the repository and use the published Pages URL. The dashboard is an educational research view with editable assumptions for cost, drawdown, and position sizing; it does not display live prices or promise trading performance.
+
 ## Repository map
 
 - [`docs/strategy-spec.md`](docs/strategy-spec.md) — detailed strategy specification and failure modes
@@ -46,4 +50,3 @@ The repository currently contains research contracts and risk/cost utilities. Da
 - [`src/fx_strategy/costs.py`](src/fx_strategy/costs.py) — transparent transaction-cost calculations
 - [`src/fx_strategy/risk.py`](src/fx_strategy/risk.py) — position sizing and drawdown controls
 - [`tests/`](tests/) — unit tests for the safety-critical utilities
-

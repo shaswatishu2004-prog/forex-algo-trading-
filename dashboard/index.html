@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Research dashboard for a cost-aware, regime-aware quantitative FX strategy.">
+  <title>Quantitative FX Research Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">FOREX ALGORITHMIC RESEARCH</p>
+      <h1>Quantitative FX Research Dashboard</h1>
+      <p class="subtitle">A transparent control room for testing whether a small predictive edge survives real execution costs and risk.</p>
+    </div>
+    <span class="status-pill">RESEARCH PROTOTYPE</span>
+  </header>
+
+  <main>
+    <section class="notice" aria-label="Important warning">
+      <strong>Research-only view.</strong> Values shown here are assumptions and scenario calculations, not live trading results or investment advice. No broker credentials or market-data feeds are connected.
+    </section>
+
+    <section class="kpi-grid" aria-label="Strategy summary">
+      <article class="kpi"><span>Model objective</span><strong>Positive net expectancy</strong><small>After spread, slippage, latency, and financing</small></article>
+      <article class="kpi"><span>Primary edge risk</span><strong>Cost sensitivity</strong><small>Small gross edges can disappear at lower timeframes</small></article>
+      <article class="kpi"><span>Historical warning</span><strong>20–41% drawdown</strong><small>Reported in the handoff; not a future limit</small></article>
+      <article class="kpi"><span>Deployment state</span><strong>Not live-ready</strong><small>Requires walk-forward and paper-trading evidence</small></article>
+    </section>
+
+    <section class="grid two-col">
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">SYSTEM MAP</p><h2>Research pipeline</h2></div><span class="panel-tag">7 layers</span></div>
+        <div class="pipeline" aria-label="Strategy pipeline">
+          <div class="step"><b>01</b><span>Data</span><small>Point-in-time bid/ask and macro data</small></div>
+          <div class="step"><b>02</b><span>Features</span><small>Returns, volatility, rates, cross-currency links</small></div>
+          <div class="step"><b>03</b><span>Regime</span><small>Filtered higher-timeframe state probabilities</small></div>
+          <div class="step"><b>04</b><span>Prediction</span><small>Baselines before stacking or GNNs</small></div>
+          <div class="step"><b>05</b><span>Portfolio</span><small>Exposure, correlation, and volatility scaling</small></div>
+          <div class="step"><b>06</b><span>Execution</span><small>Spread, latency, slippage, partial fills</small></div>
+          <div class="step"><b>07</b><span>Risk</span><small>Daily halt and independent kill switch</small></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">DECISION GATES</p><h2>What must be true</h2></div></div>
+        <ul class="gate-list">
+          <li><span class="gate-dot amber"></span><div><b>Data integrity</b><small>No look-ahead, revised-data leakage, or timestamp mismatch.</small></div></li>
+          <li><span class="gate-dot blue"></span><div><b>Net profitability</b><small>Gross and net returns remain positive under stressed costs.</small></div></li>
+          <li><span class="gate-dot green"></span><div><b>Risk containment</b><small>Position sizing and halts operate independently of the model.</small></div></li>
+          <li><span class="gate-dot red"></span><div><b>Live equivalence</b><small>Paper fills resemble the backtest before capital is scaled.</small></div></li>
+        </ul>
+        <div class="mini-meter"><div class="meter-label"><span>Evidence completeness</span><b>Prototype</b></div><div class="meter"><i style="width: 28%"></i></div><small>Currently a research scaffold, not a validated performance report.</small></div>
+      </article>
+    </section>
+
+    <section class="grid two-col">
+      <article class="panel calculator">
+        <div class="panel-heading"><div><p class="eyebrow">INTERACTIVE SCENARIO</p><h2>Cost survival test</h2></div><span class="panel-tag">Per trade</span></div>
+        <div class="form-grid">
+          <label>Gross return (%)<input id="grossReturn" type="number" value="0.0119" step="0.001" min="-10"></label>
+          <label>Spread (pips)<input id="spreadPips" type="number" value="1.0" step="0.1" min="0"></label>
+          <label>Pair price<input id="pairPrice" type="number" value="1.08" step="0.01" min="0.0001"></label>
+          <label>Commission (%)<input id="commission" type="number" value="0.002" step="0.001" min="0"></label>
+          <label>Slippage (%)<input id="slippage" type="number" value="0.003" step="0.001" min="0"></label>
+          <label>Financing (%)<input id="financing" type="number" value="0" step="0.001" min="0"></label>
+        </div>
+        <div class="result" aria-live="polite"><span>Estimated net return</span><strong id="netReturn">—</strong><small id="costMessage">Enter assumptions to calculate.</small></div>
+      </article>
+
+      <article class="panel calculator">
+        <div class="panel-heading"><div><p class="eyebrow">RISK ENGINE</p><h2>Position sizing</h2></div><span class="panel-tag">Fractional risk</span></div>
+        <div class="form-grid">
+          <label>Account equity<input id="equity" type="number" value="10000" step="100" min="1"></label>
+          <label>Risk per trade (%)<input id="riskPct" type="number" value="0.25" step="0.05" min="0.01"></label>
+          <label>Stop distance (%)<input id="stopPct" type="number" value="0.50" step="0.05" min="0.01"></label>
+          <label>Max daily loss (%)<input id="dailyLoss" type="number" value="1.00" step="0.1" min="0.1"></label>
+        </div>
+        <div class="result" aria-live="polite"><span>Illustrative position notional</span><strong id="notional">—</strong><small id="riskMessage">Sizing assumes the stop fills as modelled; real slippage can exceed it.</small></div>
+      </article>
+    </section>
+
+    <section class="grid two-col">
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">DRAWDOWN LENS</p><h2>Recovery asymmetry</h2></div><span class="panel-tag">Historical scenarios</span></div>
+        <div class="drawdown-chart" role="img" aria-label="Drawdown recovery requirements">
+          <div class="bar-row"><span>20%</span><div class="bar-track"><i style="width: 36%"></i></div><b>25.0% recovery</b></div>
+          <div class="bar-row"><span>30%</span><div class="bar-track"><i style="width: 61%"></i></div><b>42.9% recovery</b></div>
+          <div class="bar-row"><span>41%</span><div class="bar-track"><i class="danger" style="width: 100%"></i></div><b>69.5% recovery</b></div>
+          <div class="bar-row"><span>50%</span><div class="bar-track"><i class="danger" style="width: 100%"></i></div><b>100.0% recovery</b></div>
+        </div>
+        <p class="caption">A historical maximum drawdown is an observation, not a ceiling. Leverage, correlated losses, gaps, and execution failure can produce a larger live drawdown.</p>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading"><div><p class="eyebrow">TIMEFRAME POLICY</p><h2>Where each model belongs</h2></div></div>
+        <div class="timeframe-table">
+          <div class="tf-head"><span>Timeframe</span><span>Role</span><span>Primary risk</span></div>
+          <div><strong>4h / 1h</strong><span>Context and regime</span><em>Regime lag</em></div>
+          <div><strong>5m</strong><span>Setup confirmation</span><em>Whipsaw</em></div>
+          <div><strong>1m</strong><span>Entry and execution</span><em>Microstructure cost</em></div>
+        </div>
+        <p class="caption">Lower timeframes should refine execution, not carry the full burden of directional prediction.</p>
+      </article>
+    </section>
+
+    <section class="panel full-width">
+      <div class="panel-heading"><div><p class="eyebrow">RESEARCH CHECKLIST</p><h2>Before any live capital</h2></div><span class="panel-tag">Go / no-go</span></div>
+      <div class="check-grid">
+        <label><input type="checkbox"> Chronological walk-forward split</label>
+        <label><input type="checkbox"> Bid/ask and realistic fills</label>
+        <label><input type="checkbox"> Final test period locked</label>
+        <label><input type="checkbox"> Cost stress test ≥ 2×</label>
+        <label><input type="checkbox"> Paper-trading evidence</label>
+        <label><input type="checkbox"> Independent kill switch</label>
+      </div>
+      <div class="footer-note">The dashboard is intentionally conservative: a green-looking scenario is not evidence of a profitable strategy.</div>
+    </section>
+  </main>
+
+  <footer>Quantitative FX Research Engine · Public research prototype · <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-" target="_blank" rel="noreferrer">View repository</a></footer>
+  <script src="app.js"></script>
+</body>
+</html>
