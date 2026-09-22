@@ -1,0 +1,130 @@
+/* Findings page styles.
+   One hue only: blue at four lightness steps plus the neutral text colors
+   from styles.css. No amber, green, or red appears on this page. */
+
+:root {
+  --b-90: #d9eaff;
+  --b-70: #9cc6ff;
+  --b-50: #65a9ff;
+  --b-35: #4b86d6;
+  --b-25: #35639f;
+  --b-15: #24466f;
+  --b-08: #16304f;
+}
+
+/* Faint blueprint grid behind the page. */
+body {
+  background-image:
+    linear-gradient(rgba(101, 169, 255, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(101, 169, 255, .035) 1px, transparent 1px),
+    radial-gradient(circle at 85% -8%, #17305a 0, transparent 45%);
+  background-size: 28px 28px, 28px 28px, 100% 100%;
+}
+
+/* The shared amber notice would break the single-hue palette. */
+.notice {
+  color: var(--b-70);
+  background: rgba(101, 169, 255, .07);
+  border-left-color: var(--b-50);
+}
+
+.kpi strong { font-variant-numeric: tabular-nums; }
+.timeframe-table em { color: var(--b-70); }
+.timeframe-table .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; }
+.timeframe-table.offsets > div { grid-template-columns: .9fr .5fr 1.4fr; }
+
+.prose { color: var(--muted); font-size: 14px; }
+.prose p { margin-bottom: 12px; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text); }
+.formula { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; color: var(--b-70); }
+
+.finding-note {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px dashed var(--b-25);
+  border-radius: 8px;
+  color: var(--b-70);
+  font-size: 12.5px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .03em;
+}
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--b-50);
+  display: inline-block;
+  flex: 0 0 auto;
+}
+.legend i.ln { height: 0; border-radius: 0; border-top: 2px solid var(--b-90); background: none; }
+.legend i.ln-thin { height: 0; border-radius: 0; border-top: 2px solid var(--b-35); background: none; }
+.legend i.dash { height: 0; border-radius: 0; border-top: 2px dashed var(--b-70); background: none; }
+.legend i.dot { height: 0; border-radius: 0; border-top: 2px dotted var(--b-25); background: none; }
+.legend i.empty { background: rgba(101, 169, 255, .04); border: 1px dashed rgba(101, 169, 255, .4); }
+.legend i.hatch {
+  background: repeating-linear-gradient(45deg, var(--b-15) 0 3px, var(--b-70) 3px 5px);
+}
+
+.chart { display: block; width: 100%; height: auto; margin-top: 6px; }
+
+/* Grid and axis text */
+.chart .grid { stroke: rgba(101, 169, 255, .10); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font-size: 10px; letter-spacing: .04em; }
+.chart .axis-strong { fill: var(--b-70); font-size: 10px; letter-spacing: .04em; }
+.chart .rowlabel { fill: var(--text); font-size: 11.5px; }
+.chart .value { fill: var(--b-70); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.chart .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.chart .onbar { fill: var(--bg); font-size: 11px; font-weight: 700; }
+
+/* Bar charts */
+.chart .track { fill: rgba(101, 169, 255, .06); }
+.chart .bar-1d { fill: var(--b-70); }
+.chart .bar-1m { fill: var(--b-35); }
+.chart .bar-cover { fill: var(--b-50); }
+.chart .bar-zero { fill: var(--b-50); }
+
+/* Gap calendar */
+.chart .cal { stroke: rgba(101, 169, 255, .20); stroke-width: 1; }
+.chart .cal-empty { fill: rgba(101, 169, 255, .04); stroke: rgba(101, 169, 255, .25); stroke-dasharray: 2 2; }
+
+/* VWAP charts */
+.chart .px { fill: none; stroke: var(--b-35); stroke-width: 1; }
+.chart .vwap { fill: none; stroke: var(--b-90); stroke-width: 1.7; }
+.chart .sig1 { fill: none; stroke: var(--b-70); stroke-width: 1; stroke-dasharray: 5 3; }
+.chart .sig3 { fill: none; stroke: var(--b-25); stroke-width: 1; stroke-dasharray: 1.5 3.5; }
+.chart .area1 { fill: rgba(101, 169, 255, .10); stroke: none; }
+.chart .daysep { stroke: rgba(101, 169, 255, .35); stroke-width: 1; stroke-dasharray: 3 4; }
+
+/* Regime chart */
+.chart .px-daily { fill: none; stroke: var(--b-35); stroke-width: 1.2; }
+.chart .ind { fill: none; stroke: var(--b-50); stroke-width: 1.4; }
+.chart .guide { stroke: rgba(101, 169, 255, .4); stroke-width: 1; stroke-dasharray: 4 4; }
+.chart .ribbon-high { fill: var(--b-90); }
+.chart .ribbon-up { fill: var(--b-50); }
+.chart .ribbon-low { fill: var(--b-25); }
+.chart .ribbon-down { fill: var(--b-15); }
+.chart .hatch-line { stroke: var(--b-70); stroke-width: 1.1; }
+
+/* Depth chart */
+.chart .depth-daily { fill: var(--b-35); }
+.chart .depth-minute { fill: var(--b-90); }
+.chart .depth-zoom { fill: rgba(101, 169, 255, .05); stroke: rgba(101, 169, 255, .35); stroke-width: 1; stroke-dasharray: 3 3; }
+
+/* Offset diagram */
+.chart .off-day { fill: rgba(101, 169, 255, .05); stroke: rgba(101, 169, 255, .45); stroke-width: 1; stroke-dasharray: 4 4; }
+.chart .off-bar { fill: var(--b-35); }
+.chart .off-utc { stroke: rgba(101, 169, 255, .5); stroke-width: 1; stroke-dasharray: 4 4; }
+
+@media (max-width: 520px) {
+  .legend { font-size: 10.5px; }
+}

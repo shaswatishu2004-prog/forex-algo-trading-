@@ -33,7 +33,7 @@ Cleaned historical data, an analysis engine that marks institutional VWAP with t
 
 - [VWAP band math and volume proxies](tickets/vwap-band-math.md): hlc3 price, cumulative VWAP with volume-weighted sigma bands; GC=F uses real volume, EURUSD and DXY use a synthetic activity weight of range plus price change.
 - [Four-state daily regime definitions](tickets/regime-definitions.md): ATR(14) percentile over 252 bars splits high and low volatility, ADX(14) with DI direction and EMA(50) slope splits trend, point-in-time labels set at bar close, trades from next open.
-- [Stage raw historical data](tickets/stage-raw-data.md): 126,394 bars staged in `data/forex_market_data.db`; 1m gaps are weekends and one holiday only; volume exists solely on XAUUSD; stored timezone offsets are mixed per source and must be normalized before string filters.
+- [Stage raw historical data](tickets/stage-raw-data.md): 106,394 bars staged in `data/forex_market_data.db`; 1m gaps are weekends and one holiday only; volume exists solely on XAUUSD; stored timezone offsets are mixed per source and must be normalized before string filters.
 - [Minute data sources beyond 29 days](tickets/minute-data-sources.md): HistData is the primary source for deeper 1m history with OANDA as backup for tick-count volume; Yahoo, Alpha Vantage, Twelve Data, TrueFX, and Dukascopy ruled out with reasons.
 
 ## Not yet specified
