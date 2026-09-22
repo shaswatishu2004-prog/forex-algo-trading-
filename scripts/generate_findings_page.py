@@ -90,14 +90,24 @@ def calendar_findings(dates: list, cal: dict) -> dict:
         weekday_medians[symbol] = float(np.median(weekday)) if weekday else 0.0
         sunday_medians[symbol] = float(np.median(sunday)) if sunday else 0.0
     saturdays = [d for d in dates if d.weekday() == 5 and all(cal[s].get(d, 0) == 0 for s in SYMBOLS)]
-    xau_closed = [d for d in dates if d.weekday() < 5 and cal["XAUUSD"].get(d, 0) == 0]
+    # A date only counts as "XAUUSD alone" when the other two symbols have bars,
+    # so window boundary days do not show up here.
+    xau_closed = [
+        d for d in dates
+        if d.weekday() < 5
+        and cal["XAUUSD"].get(d, 0) == 0
+        and cal["EURUSD"].get(d, 0) > 0
+        and cal["DXY"].get(d, 0) > 0
+    ]
     return {
         "weekday_medians": weekday_medians,
         "sunday_medians": sunday_medians,
         "saturdays": saturdays,
         "xau_closed": xau_closed,
+        "first_date": dates[0],
+        "first_counts": {s: cal[s].get(dates[0], 0) for s in SYMBOLS},
         "last_date": dates[-1],
-        "last_count": cal["EURUSD"].get(dates[-1], 0),
+        "last_counts": {s: cal[s].get(dates[-1], 0) for s in SYMBOLS},
     }
 
 
@@ -642,11 +652,14 @@ def build_page(bars: pd.DataFrame, stats: list[dict]) -> str:
         end_str = f"{(end - 1) % 24 + 1:02d}:00"
         return f"UTC {start_str} to {end_str}"
 
-    offset_rows = [
-        ("EURUSD 1m", offsets[("EURUSD", "1m")], int(offsets[("EURUSD", "1m")][:3]), utc_window(int(offsets[("EURUSD", "1m")][:3]))),
-        ("XAUUSD and DXY 1m", offsets[("XAUUSD", "1m")], int(offsets[("XAUUSD", "1m")][:3]), utc_window(int(offsets[("XAUUSD", "1m")][:3]))),
-        ("Daily bars", offsets[("EURUSD", "1d")], int(offsets[("EURUSD", "1d")][:3]), utc_window(int(offsets[("EURUSD", "1d")][:3]))),
-    ]
+    offset_rows = []
+    for label, key in (
+        ("EURUSD 1m", ("EURUSD", "1m")),
+        ("XAUUSD and DXY 1m", ("XAUUSD", "1m")),
+        ("Daily bars", ("EURUSD", "1d")),
+    ):
+        shift = int(offsets[key][:3])
+        offset_rows.append((label, raw_offsets[key], shift, utc_window(shift)))
     offset_chart = chart_offsets(offset_rows, "Where each stored day sits on the UTC clock")
 
     example = pd.Timestamp("2026-09-15 12:00", tz="UTC")
@@ -720,7 +733,7 @@ def build_page(bars: pd.DataFrame, stats: list[dict]) -> str:
         not a preference, and the two weight schemes will not produce identical bands.</p>
       </div>
       {cover_chart}
-      {legend([("Share of bars with volume above zero", "")])}
+      {legend([("Coverage", "bar-cover"), ("No coverage", "empty")])}
       <p class="caption">Coverage counts bars where volume is greater than zero.</p>'''))
 
     sections.append(finding(
@@ -731,11 +744,10 @@ def build_page(bars: pd.DataFrame, stats: list[dict]) -> str:
       <div class="prose">
         <p>Grouped by UTC date the minute series are nearly complete on weekdays: {weekday_text} bars on a
         typical weekday. {sat_text} {sun_text} {xau_text}</p>
-        <p>The window ends on {cf["last_date"].isoformat()}, which is still building
-        ({cf["last_count"]} EURUSD bars so far), so that column reads as a thin day rather than a gap.</p>
+        <p>The first and last columns are window boundaries rather than session gaps. On\n        {cf["first_date"].isoformat()} only EURUSD holds bars ({cf["first_counts"]["EURUSD"]}). On\n        {cf["last_date"].isoformat()}, XAUUSD holds {cf["last_counts"]["XAUUSD"]} bars and DXY\n        {cf["last_counts"]["DXY"]} while EURUSD holds none.</p>
       </div>
       {cal_chart}
-      {legend([("Many bars", ""), ("Few bars", ""), ("No bars", "empty")])}
+      {legend([("Many bars", "lvl-hi"), ("Few bars", "lvl-lo"), ("No bars", "empty")])}
       <p class="caption">Hover a cell for its exact bar count. Column numbers are day of month, letters are weekday.</p>'''))
 
     sections.append(finding(
@@ -757,7 +769,7 @@ def build_page(bars: pd.DataFrame, stats: list[dict]) -> str:
           ("VWAP", "ln"),
           ("1 sigma band", "dash"),
           ("3 sigma band", "dot"),
-          ("1 sigma envelope", ""),
+          ("1 sigma envelope", "env"),
       ])}
       <div class="finding-note">Open decision: the anchor shown resets at UTC midnight. The research
       recommends 21:00 UTC, the 17:00 New York session reset, and the anchor time conflict ticket decides
@@ -782,7 +794,7 @@ def build_page(bars: pd.DataFrame, stats: list[dict]) -> str:
           ("VWAP", "ln"),
           ("1 sigma band", "dash"),
           ("3 sigma band", "dot"),
-          ("1 sigma envelope", ""),
+          ("1 sigma envelope", "env"),
       ])}'''))
 
     sections.append(finding(
@@ -801,9 +813,9 @@ def build_page(bars: pd.DataFrame, stats: list[dict]) -> str:
       </div>
       {regime_chart}
       {legend([
-          ("high volatility", "b-90"),
-          ("uptrend", ""),
-          ("low volatility", ""),
+          ("high volatility", "ribbon-high"),
+          ("uptrend", "ribbon-up"),
+          ("low volatility", "ribbon-low"),
           ("downtrend", "hatch"),
       ])}
       <div class="finding-note">Every bar carries exactly one label, so a strong trend inside high
@@ -825,7 +837,7 @@ def build_page(bars: pd.DataFrame, stats: list[dict]) -> str:
         minute level claim is credible.</p>
       </div>
       {depth_svg}
-      {legend([("Daily range", ""), ("Minute range", "b-90")])}'''))
+      {legend([("Daily range", "b-35"), ("Minute range", "b-90")])}'''))
 
     sections.append(finding(
         8,

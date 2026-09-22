@@ -74,6 +74,21 @@ body {
 .legend i.hatch {
   background: repeating-linear-gradient(45deg, var(--b-15) 0 3px, var(--b-70) 3px 5px);
 }
+/* Swatches mirror the chart fill classes so each legend matches its chart. */
+.legend i.bar-1d { background: var(--b-70); }
+.legend i.bar-1m { background: var(--b-35); }
+.legend i.bar-cover { background: var(--b-50); }
+.legend i.lvl-hi { background: rgba(101, 169, 255, .95); }
+.legend i.lvl-lo { background: rgba(101, 169, 255, .30); }
+.legend i.ribbon-high { background: var(--b-90); }
+.legend i.ribbon-up { background: var(--b-50); }
+.legend i.ribbon-low { background: var(--b-25); }
+.legend i.b-35 { background: var(--b-35); }
+.legend i.b-90 { background: var(--b-90); }
+.legend i.env {
+  background: rgba(101, 169, 255, .16);
+  border: 1px solid rgba(101, 169, 255, .35);
+}
 
 .chart { display: block; width: 100%; height: auto; margin-top: 6px; }
 
