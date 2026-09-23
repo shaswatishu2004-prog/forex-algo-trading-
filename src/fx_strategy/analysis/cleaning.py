@@ -121,15 +121,6 @@ def _nth_sunday(year: int, month: int, nth: int) -> pd.Timestamp:
     return sundays[-1] if nth == -1 else sundays[nth - 1]
 
 
-def _spring_gap_present(stamps: pd.Series, spring_day: pd.Timestamp) -> bool:
-    """True when the EU spring Sunday shows its skipped 19:00 stamp hour."""
-    day = stamps[(stamps >= spring_day) & (stamps < spring_day + pd.Timedelta(days=1))]
-    if day.empty:
-        return False
-    hours = set(day.dt.hour)
-    return 18 in hours and 19 not in hours and 20 in hours
-
-
 def _fall_step_position(stamps: pd.Series, fall_day: pd.Timestamp) -> int | None:
     """Position of the 19:59 -> 19:00 repeat split on the EU fall Sunday."""
     day = stamps[(stamps >= fall_day) & (stamps < fall_day + pd.Timedelta(days=1))]
@@ -147,13 +138,17 @@ def _dst_offset_hours(stamps: pd.Series) -> pd.Series:
     Summer stamps (EDT) get +4, winter stamps (EST) +5. The switch instants
     follow the US DST schedule (2nd Sunday March, 1st Sunday November — both
     inside the weekend closure) for stamps before 2019 and the EU DST schedule
-    (last Sunday March/October, switching 00:00 UTC the Monday after) from
-    2019 on, where spring leaves a skipped 19:00 hour and fall a repeated one.
-    The repeated fall block is split by row order: the first 19:xx block is
-    still summer. A file lacking the expected spring gap or fall step falls
-    back to the US schedule date (inside the closure, so any instant in it
-    agrees with the data) — EURUSD's 2024 fall switch leaves no trace while
-    XAUUSD's repeats normally, so detection is per file, never a year table.
+    (last Sunday March/October) from 2019 on. The spring boundary sits at the
+    spring Sunday's raw 20:00 stamp: the first hour the source numbers as EDT.
+    Files that skip the 19:00 hour (EURUSD/XAUUSD, where the switch lands
+    inside their Sunday session) and files whose Sunday session opens raw
+    19:00 EST or 20:00 EDT (DXY, whose Sunday opens at the week boundary so
+    the gap sits inside the closure and can never be detected) both resolve —
+    19:xx stamps stay winter, 20:xx become summer — so spring needs no
+    per-file detection. Fall keeps per-file detection: the repeated 19:59 ->
+    19:00 block is split by row order (first 19:xx block still summer), and a
+    file with no visible step (EURUSD's 2024 switch leaves no trace while
+    XAUUSD's repeats normally) falls back to the US 1st-Sunday-November date.
     """
     if stamps.empty:
         return pd.Series(dtype="int8")
@@ -170,10 +165,7 @@ def _dst_offset_hours(stamps: pd.Series) -> pd.Series:
             offsets[summer] = 4
             continue
         spring_day = _nth_sunday(year, 3, -1)
-        if _spring_gap_present(stamps, spring_day):
-            spring_at = spring_day + pd.Timedelta(hours=19)
-        else:
-            spring_at = _nth_sunday(year, 3, 2)
+        spring_at = spring_day + pd.Timedelta(hours=20)
         fall_day = _nth_sunday(year, 10, -1)
         step_at = _fall_step_position(stamps, fall_day)
         if step_at is None:

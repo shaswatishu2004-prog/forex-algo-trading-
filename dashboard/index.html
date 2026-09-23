@@ -39,7 +39,7 @@
     <ul class="meta-strip" aria-label="Repository status">
       <li><b>17,528,036</b> bars cleaned</li>
       <li><b>26</b> years of 1m history</li>
-      <li><b>8 / 12</b> decisions resolved</li>
+      <li><b>10 / 12</b> decisions resolved</li>
       <li class="warn"><b>0</b> trades taken</li>
     </ul>
 
@@ -49,7 +49,7 @@
 
     <section class="kpi-grid" aria-label="At a glance">
       <article class="kpi"><span>Cleaned data</span><strong>17,528,036 bars</strong><small>Six series: EURUSD, XAUUSD, and DXY on 1d and 1m</small></article>
-      <article class="kpi"><span>Open decisions</span><strong>4 open</strong><small>2 ready now, 2 blocked downstream</small></article>
+      <article class="kpi"><span>Open decisions</span><strong>2 open</strong><small>2 ready now, none blocked</small></article>
       <article class="kpi"><span>Backtest status</span><strong>1 year observation view</strong><small>The prototype recomputes 365 days of 1m bands and regime per run</small></article>
       <article class="kpi"><span>Live accuracy</span><strong class="warn">Not measured</strong><small>0 trades taken, no feed connected</small></article>
     </section>
@@ -116,7 +116,7 @@
             <a class="link-card" href="prototype.html"><span><b>Backtest observation view</b><small>One year of 1-minute VWAP bands, daily regime, and the signal tape for all three symbols.</small></span><span class="arrow">&rarr;</span></a>
             <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/vwap-regime-research.md" target="_blank" rel="noreferrer"><span><b>vwap-regime-research.md</b><small>VWAP formulas, weighted sigma, and the four regime thresholds with sources.</small></span><span class="arrow">&rarr;</span></a>
             <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/minute-data-sources-research.md" target="_blank" rel="noreferrer"><span><b>minute-data-sources-research.md</b><small>HistData primary, OANDA backup, and five sources ruled out with reasons.</small></span><span class="arrow">&rarr;</span></a>
-            <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer"><span><b>Wayfinder map</b><small>Destination, eight resolved decisions, and the open frontier.</small></span><span class="arrow">&rarr;</span></a>
+            <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer"><span><b>Wayfinder map</b><small>Destination, ten resolved decisions, and the open frontier.</small></span><span class="arrow">&rarr;</span></a>
           </div>
         </article>
       </div>
@@ -143,18 +143,13 @@
         </article>
 
         <article class="panel">
-          <div class="panel-heading"><div><p class="eyebrow">OPEN DECISIONS</p><h3>Wayfinder frontier</h3></div><span class="panel-tag">8 open</span></div>
+          <div class="panel-heading"><div><p class="eyebrow">OPEN DECISIONS</p><h3>Wayfinder frontier</h3></div><span class="panel-tag">2 open</span></div>
           <p class="sub">Ready now</p>
           <ul class="decision-list">
-            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/cleaning-rules.md" target="_blank" rel="noreferrer">Cleaning rules</a></b><small>Turns staged raw bars into analysis-ready bars, starting with UTC timestamp normalization.</small></div></li>
-            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/signal-combination-rule.md" target="_blank" rel="noreferrer">Signal combination rule</a></b><small>How the VWAP condition and regime state combine into one actionable signal.</small></div></li>
+            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/signals-json-schema.md" target="_blank" rel="noreferrer">Signals JSON schema</a></b><small>Field list and versioning for the two record types written to signals/.</small></div></li>
+            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/backtest-design.md" target="_blank" rel="noreferrer">Backtest design</a></b><small>Validation plan, cost inputs, and the performance report for the backtest.</small></div></li>
           </ul>
-          <p class="sub">Blocked downstream</p>
-          <div class="blocked-row">
-            <span class="chip mute">Signals JSON schema</span>
-            <span class="chip mute">Backtest design</span>
-          </div>
-          <p class="caption">The signals JSON schema ticket carries the candidate fields, and a new subfolder holds the output once the schema lands.</p>
+          <p class="caption">Signals JSON schema sits on the frontier with the field list drafted, and backtest design unblocks now that cleaning rules is resolved. signals/ already holds the observation output.</p>
         </article>
       </div>
     </section>

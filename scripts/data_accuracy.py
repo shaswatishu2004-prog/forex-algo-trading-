@@ -128,9 +128,24 @@ def _continuity(window: pd.DataFrame, anchor: int) -> dict[str, Any]:
         }
     )
 
+    # A Friday gap counts as structure from one hour before the frame's own
+    # median Friday close hour (derived, not the old hardcoded 20). The close
+    # sits on the source clock at 17:00 ET year-round, so in summer the
+    # boundary lands on raw >= 15:00 -- exactly the source-clock cutoff the
+    # fixed-5 baseline measured (raw + 5 >= 20) -- which keeps the hole gate
+    # comparable across offset frames; in winter the boundary sits one raw
+    # hour earlier, the metric's only added slack (~25 min/yr of Friday
+    # 14:0x micro-dropouts reclassified as structure).
+    friday_stamps = stamps[stamps.dt.weekday == 4]
+    if friday_stamps.empty:
+        friday_structure_hour = 20  # legacy fallback: no Friday data in window
+    else:
+        friday_closes = friday_stamps.groupby(friday_stamps.dt.floor("D")).max()
+        friday_structure_hour = max(int(friday_closes.dt.hour.median()) - 1, 0)
+
     def is_structure(row: pd.Series) -> bool:
         weekday = row["start"].weekday()
-        return weekday >= 5 or (weekday == 4 and row["start"].hour >= 20)
+        return weekday >= 5 or (weekday == 4 and row["start"].hour >= friday_structure_hour)
 
     structure = gaps.apply(is_structure, axis=1)
     holes = gaps[~structure].sort_values("minutes", ascending=False)
