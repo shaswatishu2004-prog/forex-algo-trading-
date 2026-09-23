@@ -40,6 +40,7 @@ NAV = """<nav class="nav" aria-label="Primary">
         <a href="index.html#build">Build</a>
         <a href="index.html#tools">Tools</a>
         <a href="index.html#gates">Gates</a>
+        <a href="prototype.html">Backtest</a>
       </div>
       <div class="nav-actions">
         <a class="btn btn-primary" href="findings.html">Findings</a>
@@ -383,7 +384,12 @@ def chart_vwap(window: pd.DataFrame, decimals: int, label: str) -> str:
     return wrap("".join(parts), width, height, label)
 
 
-def chart_regime(reg: pd.DataFrame, label: str) -> str:
+def chart_regime(
+    reg: pd.DataFrame,
+    label: str,
+    title: str = "EURUSD daily close",
+    decimals: int = 4,
+) -> str:
     width, height = 720, 470
     ml, mr = 58, 14
     x0, x1 = ml, width - mr
@@ -411,8 +417,8 @@ def chart_regime(reg: pd.DataFrame, label: str) -> str:
         price = lo + frac * (hi - lo)
         y = sy_price(price)
         parts.append(f'<line class="grid" x1="{x0}" y1="{y:.1f}" x2="{x1}" y2="{y:.1f}"/>')
-        parts.append(f'<text class="axis" x="{x0 - 8}" y="{y + 3.5:.1f}" text-anchor="end">{price:.4f}</text>')
-    parts.append(f'<text class="axis-strong" x="{x0 + 6}" y="{a_top + 12}">EURUSD daily close</text>')
+        parts.append(f'<text class="axis" x="{x0 - 8}" y="{y + 3.5:.1f}" text-anchor="end">{price:.{decimals}f}</text>')
+    parts.append(f'<text class="axis-strong" x="{x0 + 6}" y="{a_top + 12}">{title}</text>')
     parts.append(f'<path class="px-daily" d="{path_from(xs, [sy_price(p) for p in close])}"/>')
 
     labels = reg["label"].tolist()

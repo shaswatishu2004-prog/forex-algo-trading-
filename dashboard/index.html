@@ -17,6 +17,7 @@
         <a href="index.html#build">Build</a>
         <a href="index.html#tools">Tools</a>
         <a href="index.html#gates">Gates</a>
+        <a href="prototype.html">Backtest</a>
       </div>
       <div class="nav-actions">
         <a class="btn btn-primary" href="findings.html">Findings</a>
@@ -36,9 +37,9 @@
 
   <main>
     <ul class="meta-strip" aria-label="Repository status">
-      <li><b>106,394</b> bars staged</li>
-      <li><b>30</b> dates of 1m history</li>
-      <li><b>4 / 12</b> decisions resolved</li>
+      <li><b>17,528,036</b> bars cleaned</li>
+      <li><b>26</b> years of 1m history</li>
+      <li><b>8 / 12</b> decisions resolved</li>
       <li class="warn"><b>0</b> trades taken</li>
     </ul>
 
@@ -47,9 +48,9 @@
     </section>
 
     <section class="kpi-grid" aria-label="At a glance">
-      <article class="kpi"><span>Staged data</span><strong>106,394 bars</strong><small>Six series: EURUSD, XAUUSD, and DXY on 1d and 1m</small></article>
-      <article class="kpi"><span>Open decisions</span><strong>8 open</strong><small>4 ready now, 4 blocked downstream</small></article>
-      <article class="kpi"><span>Backtest status</span><strong class="warn">Not run</strong><small>The backtest design ticket waits on three decisions</small></article>
+      <article class="kpi"><span>Cleaned data</span><strong>17,528,036 bars</strong><small>Six series: EURUSD, XAUUSD, and DXY on 1d and 1m</small></article>
+      <article class="kpi"><span>Open decisions</span><strong>4 open</strong><small>2 ready now, 2 blocked downstream</small></article>
+      <article class="kpi"><span>Backtest status</span><strong>1 year observation view</strong><small>The prototype recomputes 365 days of 1m bands and regime per run</small></article>
       <article class="kpi"><span>Live accuracy</span><strong class="warn">Not measured</strong><small>0 trades taken, no feed connected</small></article>
     </section>
 
@@ -66,7 +67,7 @@
             <li><span class="gate-dot blue"></span><div><b>Anchored VWAP</b><small>Typical price (H+L+C)/3 weighted across the anchor window and recomputed every minute.</small></div></li>
             <li><span class="gate-dot blue"></span><div><b>1-sigma and 3-sigma bands</b><small>Each band plots VWAP plus or minus one and three weighted standard deviations, reset with the anchor.</small></div></li>
             <li><span class="gate-dot amber"></span><div><b>Volume weights</b><small>Gold futures use reported COMEX volume. EURUSD and DXY use a synthetic activity weight, because spot FX and the index publish no volume.</small></div></li>
-            <li><span class="gate-dot amber"></span><div><b>Anchor window</b><small>UTC midnight daily for now. The institutional 21:00 UTC session reset is the open alternative.</small></div></li>
+            <li><span class="gate-dot blue"></span><div><b>Anchor window</b><small>21:00 UTC session reset every day, the institutional convention, resolved in the anchor decision.</small></div></li>
           </ul>
           <div class="formula-strip" aria-label="Core formulas">
             <code>VWAP = sum(w * p) / sum(w)</code>
@@ -98,23 +99,24 @@
       </div>
       <div class="grid two-col">
         <article class="panel">
-          <div class="panel-heading"><div><p class="eyebrow">DATA LAYER</p><h3>Staged historical data</h3></div><span class="panel-tag">106,394 bars</span></div>
+          <div class="panel-heading"><div><p class="eyebrow">DATA LAYER</p><h3>Staged historical data</h3></div><span class="panel-tag">17,528,036 bars</span></div>
           <div class="timeframe-table">
             <div class="tf-head"><span>Symbol</span><span>Daily history</span><span>Minute history</span></div>
-            <div><strong>EURUSD</strong><span>5,918 bars from Dec 2003</span><em>28,388 bars, no volume</em></div>
-            <div><strong>XAUUSD</strong><span>6,540 bars from Aug 2000</span><em>25,798 bars, real volume</em></div>
-            <div><strong>DXY</strong><span>14,148 bars from Jan 1971</span><em>25,602 bars, no volume</em></div>
+            <div><strong>EURUSD</strong><span>7,289 bars from May 2000</span><em>8,990,898 bars, no volume</em></div>
+            <div><strong>XAUUSD</strong><span>6,960 bars from Aug 2000</span><em>6,138,478 bars, real volume</em></div>
+            <div><strong>DXY</strong><span>14,303 bars from Jan 1971</span><em>2,370,108 bars, no volume</em></div>
           </div>
           <p class="caption">Minute gaps are weekends and one holiday. Volume exists only on the gold futures contract, which makes the synthetic weight mandatory rather than optional.</p>
         </article>
 
         <article class="panel">
-          <div class="panel-heading"><div><p class="eyebrow">EVIDENCE</p><h3>Research and findings</h3></div><span class="panel-tag">4 documents</span></div>
+          <div class="panel-heading"><div><p class="eyebrow">EVIDENCE</p><h3>Research and findings</h3></div><span class="panel-tag">5 documents</span></div>
           <div class="link-list">
             <a class="link-card" href="findings.html"><span><b>Data findings page</b><small>Eight charts computed from the staged database: counts, gaps, VWAP bands, regime labels, offsets.</small></span><span class="arrow">&rarr;</span></a>
+            <a class="link-card" href="prototype.html"><span><b>Backtest observation view</b><small>One year of 1-minute VWAP bands, daily regime, and the signal tape for all three symbols.</small></span><span class="arrow">&rarr;</span></a>
             <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/vwap-regime-research.md" target="_blank" rel="noreferrer"><span><b>vwap-regime-research.md</b><small>VWAP formulas, weighted sigma, and the four regime thresholds with sources.</small></span><span class="arrow">&rarr;</span></a>
             <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/minute-data-sources-research.md" target="_blank" rel="noreferrer"><span><b>minute-data-sources-research.md</b><small>HistData primary, OANDA backup, and five sources ruled out with reasons.</small></span><span class="arrow">&rarr;</span></a>
-            <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer"><span><b>Wayfinder map</b><small>Destination, four resolved decisions, and the open frontier.</small></span><span class="arrow">&rarr;</span></a>
+            <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer"><span><b>Wayfinder map</b><small>Destination, eight resolved decisions, and the open frontier.</small></span><span class="arrow">&rarr;</span></a>
           </div>
         </article>
       </div>
@@ -130,7 +132,7 @@
         <article class="panel">
           <div class="panel-heading"><div><p class="eyebrow">SYSTEM MAP</p><h3>Research pipeline</h3></div><span class="panel-tag">7 layers</span></div>
           <div class="pipeline" aria-label="Strategy pipeline">
-            <div class="step"><div class="step-top"><b>01</b><span class="chip">Staged</span></div><span>Data</span><small>Point-in-time price history in SQLite, 106,394 bars.</small></div>
+            <div class="step"><div class="step-top"><b>01</b><span class="chip">Cleaned</span></div><span>Data</span><small>Point-in-time price history in data/processed, 17,528,036 bars.</small></div>
             <div class="step"><div class="step-top"><b>02</b><span class="chip mute">Planned</span></div><span>Features</span><small>Returns, volatility, rates, cross-currency links.</small></div>
             <div class="step"><div class="step-top"><b>03</b><span class="chip">Specified</span></div><span>Regime</span><small>Four-state daily labels, rules resolved in research.</small></div>
             <div class="step"><div class="step-top"><b>04</b><span class="chip mute">Out of scope</span></div><span>Prediction</span><small>Machine learning sits outside this map on purpose.</small></div>
@@ -144,15 +146,11 @@
           <div class="panel-heading"><div><p class="eyebrow">OPEN DECISIONS</p><h3>Wayfinder frontier</h3></div><span class="panel-tag">8 open</span></div>
           <p class="sub">Ready now</p>
           <ul class="decision-list">
-            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/anchor-time-conflict.md" target="_blank" rel="noreferrer">Anchor time conflict</a></b><small>UTC midnight against the research recommendation of 21:00 UTC. Blocks the visual prototype.</small></div></li>
-            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/history-depth.md" target="_blank" rel="noreferrer">History depth</a></b><small>How much of the deeper HistData 1m history to adopt beyond the 29-day window.</small></div></li>
-            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/engine-folder-layout.md" target="_blank" rel="noreferrer">Engine folder layout</a></b><small>Where the analysis engine lives inside the package.</small></div></li>
             <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/cleaning-rules.md" target="_blank" rel="noreferrer">Cleaning rules</a></b><small>Turns staged raw bars into analysis-ready bars, starting with UTC timestamp normalization.</small></div></li>
+            <li><span class="chip amber">Ready</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/signal-combination-rule.md" target="_blank" rel="noreferrer">Signal combination rule</a></b><small>How the VWAP condition and regime state combine into one actionable signal.</small></div></li>
           </ul>
           <p class="sub">Blocked downstream</p>
           <div class="blocked-row">
-            <span class="chip mute">Visual prototype</span>
-            <span class="chip mute">Signal combination rule</span>
             <span class="chip mute">Signals JSON schema</span>
             <span class="chip mute">Backtest design</span>
           </div>
@@ -245,6 +243,7 @@
     <span>Quantitative FX Research Engine</span>
     <span>Public research prototype</span>
     <a href="findings.html">Data findings</a>
+    <a href="prototype.html">Backtest</a>
     <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer">Wayfinder map</a>
     <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-" target="_blank" rel="noreferrer">Repository</a>
   </footer>

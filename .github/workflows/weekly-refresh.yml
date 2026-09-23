@@ -1,0 +1,54 @@
+name: weekly-1m-refresh
+
+# Year-round weekly loop: fetch the latest week of 1m bars, clean, re-run the
+# analysis engine, publish fresh signals JSON. Runs every Monday 06:00 UTC for
+# the life of the repository (365 days a year), matching scripts/weekly_refresh.py
+# and refresh.cron in config/default.yaml.
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas yfinance
+
+      - name: Restore SQLite database
+        uses: actions/cache@v4
+        with:
+          path: data/forex_market_data.db
+          key: market-db-${{ github.run_id }}
+          restore-keys: |
+            market-db-
+
+      - name: Run weekly refresh cycle
+        run: python scripts/weekly_refresh.py --once
+
+      # Signals JSON is gitignored by policy; publish it as a run artifact so
+      # the latest week's output stays inspectable without bloating the repo.
+      - name: Upload signals artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signals-${{ github.run_id }}
+          path: |
+            signals/*.json
+            data/processed/manifest.json
+          if-no-files-found: warn
+          retention-days: 90

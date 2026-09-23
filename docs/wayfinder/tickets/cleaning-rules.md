@@ -1,6 +1,7 @@
 ---
 label: wayfinder:grilling
 status: open
+claimed: this-session
 blocked_by: [stage-raw-data]
 ---
 

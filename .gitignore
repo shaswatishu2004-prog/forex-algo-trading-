@@ -12,6 +12,8 @@ data/raw/
 data/processed/
 artifacts/
 logs/
+signals/*.json
+!signals/README.md
 data/*.db
 *.db
 *.sqlite
