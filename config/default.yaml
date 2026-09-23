@@ -67,8 +67,52 @@ execution:
   model_partial_fills: true
   limit_order_timeout_seconds: 30
 
+costs:
+  # Round-trip magnitudes as decimal returns on notional, one block per symbol.
+  # Each is charged only when the matching execution.include_* flag is true, and
+  # they feed TradeCosts in src/fx_strategy/costs.py. Costs are returns rather
+  # than fixed cash so they stay valid as notional changes with equity; a fixed
+  # per-lot commission would understate cost on small trades, which the stress
+  # pass in scripts/run_backtest.py is meant to expose.
+  EURUSD:
+    spread: 0.000055
+    commission: 0.000060
+    slippage: 0.000018
+  XAUUSD:
+    spread: 0.000096
+    commission: 0.000019
+    slippage: 0.000019
+  DXY:
+    spread: 0.000073
+    commission: 0.000030
+    slippage: 0.000027
+  # Charged once per 21:00 UTC boundary a position is still open across. The
+  # backtest exits inside the session, so this stays zero in practice.
+  financing_per_session: 0.00025
+
 validation:
   method: anchored_walk_forward
   final_test_is_locked: true
   minimum_stress_cost_multiplier: 2.0
   paper_trade_before_live: true
+
+backtest:
+  # Exactly one trailing year of one-minute bars, read straight off the tail of
+  # each data/processed CSV. warmup_days rides ahead of window_days so the first
+  # session inside the window already has a full set of bands; those rows are
+  # dropped before simulation but keep the first in-window signal honest.
+  window_days: 365
+  warmup_days: 2
+  initial_equity: 100000
+  fold_blocks: 6
+  # Bars to push the fill past the next open for the delayed-execution pass.
+  entry_delay_bars: 1
+  delayed_entry_delay_bars: 5
+  # risk.max_portfolio_drawdown is a live-account kill switch, but the required
+  # report needs a full twelve months to measure worst month, recovery time and
+  # a locked final test with trades in it. A run that stops at its first 15%
+  # drawdown reports only the months before the breach and leaves the walk
+  # forward folds empty, so the breach is recorded and reported by default
+  # rather than enforced. Set true to stop opening at the breach, which is what
+  # a funded account would actually do.
+  enforce_portfolio_halt: false
