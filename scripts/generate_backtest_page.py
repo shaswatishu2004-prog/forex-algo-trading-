@@ -675,6 +675,14 @@ def build_page(results: dict[str, Any]) -> str:
             ),
             (
                 "red",
+                "The two structural filters cut the loss in half but moved no edge",
+                "Dropping Asia and any target worth under 3x the round trip took the run from 6,687 trades "
+                "and -81.92% net to 2,302 trades and -43.90% net, with costs down from +82.77% to +44.73%. "
+                "Gross barely moved, +0.85% before against +0.83% now, so the removed trades carried cost "
+                "and no edge. Cheaper trading cannot rescue a signal that earns nothing before costs.",
+            ),
+            (
+                "red",
                 "The hit rate is a genuine strategy result, not a session artifact",
                 f"{num(metrics['hit_rate_pct'], 1)}% of exits land on the target. Stops fire far more often than targets, "
                 "and excluding the session-boundary exits does not move the number.",
@@ -689,9 +697,11 @@ def build_page(results: dict[str, Any]) -> str:
                 "The daily loss halt still stops entries inside a bad day",
                 f"{count(diag.get('daily_loss_halts', 0))} halts. "
                 + (
-                    f"The {pct(metrics['net_return_pct'])} drawdown limit was "
-                    + ("breached" if diag.get("drawdown_breached") else "not breached")
-                    + " and is recorded rather than enforced, so the year runs to completion."
+                    f"The {round(float(diag.get('drawdown_breach_pct') or 15.0))}% portfolio drawdown limit "
+                    f"was breached on {str(diag.get('drawdown_breach_at', ''))[:10]} and is recorded "
+                    "rather than enforced, so the year runs to completion."
+                    if diag.get("drawdown_breached")
+                    else "The 15% portfolio drawdown limit was never reached; it is recorded rather than enforced."
                 ),
             ),
             (
@@ -766,6 +776,16 @@ def build_page(results: dict[str, Any]) -> str:
             ("blue", "Bars simulated", " · ".join(f"{k} {count(v)}" for k, v in sorted(diag.get("per_symbol_bars", {}).items()))),
             ("blue", "Signals seen", f"{count(diag.get('signals_seen', 0))} entries evaluated bar by bar."),
             ("blue", "Signals rejected by regime", f"{count(diag.get('signals_rejected_by_regime', 0))} filtered by the daily regime map before any fill."),
+            (
+                "blue",
+                "Skipped by session filter",
+                f"{count(diag.get('signals_skipped_by_session', 0))} passed over because the signal bar fell in a skipped session ({', '.join(diag.get('entry_filters', {}).get('skip_sessions', [])) or 'none'}).",
+            ),
+            (
+                "blue",
+                "Skipped below cost floor",
+                f"{count(diag.get('signals_skipped_by_cost_floor', 0))} passed over because the target was worth less than {diag.get('entry_filters', {}).get('min_target_cost_multiple', 0):g} times the round-trip cost.",
+            ),
             ("blue", "Daily loss halts", f"{count(diag.get('daily_loss_halts', 0))} days stopped for new entries after the daily loss cap."),
             (
                 "amber" if diag.get("drawdown_breached") else "blue",

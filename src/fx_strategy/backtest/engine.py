@@ -197,6 +197,48 @@ def levels_for(kind: str, direction: str, vwap: float, sigma: float) -> tuple[fl
     return vwap - 5.0 * sigma, vwap - sigma
 
 
+def skip_reason(
+    signal_row: Any,
+    bar_row: Any,
+    costs: TradeCosts,
+    filters: dict[str, Any],
+) -> str | None:
+    """Why a fill should be passed over, or None to take it.
+
+    Two structural checks, both fixed by arithmetic on the cost table rather
+    than fitted to the sample:
+
+    ``session``
+        The signal bar falls in a bucket listed in ``skip_sessions``.
+    ``cost_floor``
+        The target is worth less than ``min_target_cost_multiple`` round
+        trips. Sigma is zero on the first bar of a session and widens from
+        there, so the opening minutes of every session offer targets that
+        cannot pay for the trade even when they are reached.
+    """
+    bucket = session_hour_bucket(bar_row.timestamp.hour)
+    if bucket in filters.get("skip_sessions", ()):
+        return "session"
+
+    multiple = float(filters.get("min_target_cost_multiple", 0.0) or 0.0)
+    if multiple <= 0:
+        return None
+    kind = signal_row.signal_kind
+    direction = signal_row.signal_direction
+    sigma = float(signal_row.sigma)
+    if not isinstance(kind, str) or not isinstance(direction, str) or sigma <= 0:
+        return None
+    entry_price = float(bar_row.open)
+    if entry_price <= 0:
+        return None
+
+    target, _ = levels_for(kind, direction, float(signal_row.vwap), sigma)
+    round_trip_in_price = costs.total * entry_price
+    if abs(target - entry_price) < multiple * round_trip_in_price:
+        return "cost_floor"
+    return None
+
+
 # ---------------------------------------------------------------- preparation
 
 def join_regime(minute: pd.DataFrame, daily: pd.DataFrame, anchor_hour: int) -> pd.DataFrame:
@@ -307,6 +349,13 @@ def simulate(
     combined = combined.sort_values("timestamp", kind="stable").reset_index(drop=True)
 
     costs_by_symbol = {symbol: trade_costs(symbol, cfg) for symbol in prepared}
+    # Entry filters. Empty defaults keep every signal, so a config without a
+    # filters block reproduces the unfiltered baseline exactly.
+    filter_cfg = cfg.get("filters", {}) or {}
+    filters = {
+        "skip_sessions": frozenset(str(s) for s in filter_cfg.get("skip_sessions", []) or []),
+        "min_target_cost_multiple": float(filter_cfg.get("min_target_cost_multiple", 0.0) or 0.0),
+    }
     open_trades: dict[str, Trade] = {}
     unrealized: dict[str, float] = {}
     pending: dict[str, int] = {}
@@ -330,6 +379,12 @@ def simulate(
     diagnostics = {
         "signals_seen": 0,
         "signals_rejected_by_regime": rejected,
+        "signals_skipped_by_session": 0,
+        "signals_skipped_by_cost_floor": 0,
+        "entry_filters": {
+            "skip_sessions": sorted(filters["skip_sessions"]),
+            "min_target_cost_multiple": filters["min_target_cost_multiple"],
+        },
         "daily_loss_halts": 0,
         "enforce_portfolio_halt": enforce_halt,
         "drawdown_breached": False,
@@ -370,17 +425,22 @@ def simulate(
                 signal_index = pending.pop(symbol)
                 since_signal.pop(symbol, None)
                 if symbol not in open_trades and not halted and not day_halted:
-                    trade = _open_trade(
-                        combined.iloc[signal_index],
-                        row,
-                        costs_by_symbol[symbol],
-                        limits,
-                        leverage_cap,
-                        initial_equity + realized + sum(unrealized.values()),
-                    )
-                    if trade is not None:
-                        open_trades[symbol] = trade
-                        unrealized[symbol] = 0.0
+                    signal_row = combined.iloc[signal_index]
+                    reason = skip_reason(signal_row, row, costs_by_symbol[symbol], filters)
+                    if reason is not None:
+                        diagnostics[f"signals_skipped_by_{reason}"] += 1
+                    else:
+                        trade = _open_trade(
+                            signal_row,
+                            row,
+                            costs_by_symbol[symbol],
+                            limits,
+                            leverage_cap,
+                            initial_equity + realized + sum(unrealized.values()),
+                        )
+                        if trade is not None:
+                            open_trades[symbol] = trade
+                            unrealized[symbol] = 0.0
 
         trade = open_trades.get(symbol)
         if trade is not None:
@@ -879,6 +939,7 @@ __all__ = [
     "serialize_trades",
     "sensitivity",
     "session_hour_bucket",
+    "skip_reason",
     "simulate",
     "trade_costs",
     "vol_bucket",

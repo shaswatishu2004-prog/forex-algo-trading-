@@ -86,9 +86,28 @@ costs:
     spread: 0.000073
     commission: 0.000030
     slippage: 0.000027
-  # Charged once per 21:00 UTC boundary a position is still open across. The
-  # backtest exits inside the session, so this stays zero in practice.
+  # Charged once for any position still open when the session rolls at
+  # 21:00 UTC; a stop or target hit inside one session pays none. It came to
+  # 1.84% of starting equity over the trailing year, the smallest of the four
+  # cost lines.
   financing_per_session: 0.00025
+
+filters:
+  # Two structural entry filters. Neither is fitted to the sample: both follow
+  # from arithmetic on the cost table above, so neither can be overfit.
+  #
+  # min_target_cost_multiple skips any fill whose profit target is worth less
+  # than this multiple of the round-trip cost. Sigma starts at zero on the
+  # first bar of a session and widens from there, so the opening minutes offer
+  # targets smaller than the cost of reaching them, and those entries lose
+  # money on a perfectly correct call. Set 0 to disable.
+  min_target_cost_multiple: 3.0
+  # skip_sessions drops any fill whose signal bar falls in one of these
+  # session_hour_bucket labels: asia is 21:00-07:00 UTC, london 07:00-13:00,
+  # new_york 13:00-21:00. In the baseline run asia held two thirds of all
+  # trades, produced no gross edge at all, and carried most of the cost.
+  # Set to [] to disable.
+  skip_sessions: [asia]
 
 validation:
   method: anchored_walk_forward

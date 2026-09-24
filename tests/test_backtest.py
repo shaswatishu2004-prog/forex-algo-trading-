@@ -213,6 +213,107 @@ def test_unknown_symbol_pays_no_costs(cfg):
     assert trade_costs("NOSUCH", cfg).total == 0.0
 
 
+# --------------------------------------------------------------- entry filters
+
+def _costly_cfg(cfg: dict) -> dict:
+    """Give the synthetic TEST symbol an EURUSD-sized round-trip cost."""
+    cfg["costs"]["TEST"] = {
+        "spread": 0.000055,
+        "commission": 0.000060,
+        "slippage": 0.000018,
+    }
+    return cfg
+
+
+def _three_bars(**kwargs) -> pd.DataFrame:
+    return _prepared(
+        stamps=["2026-01-02 10:00", "2026-01-02 10:01", "2026-01-02 10:02"],
+        ohlc=[
+            (1.0995, 1.0998, 1.0992, 1.0994),
+            (1.0990, 1.0995, 1.0988, 1.0993),
+            (1.0993, 1.1002, 1.0990, 1.1001),
+        ],
+        admitted=[True, False, False],
+        sessions=["2026-01-02"] * 3,
+        **kwargs,
+    )
+
+
+def test_session_filter_drops_a_signal_from_a_skipped_session(cfg):
+    """Asia runs 21:00-07:00 UTC; a signal there is counted, not taken."""
+    frame = _three_bars()
+    frame["timestamp"] = pd.to_datetime(
+        ["2026-01-02 23:00", "2026-01-02 23:01", "2026-01-02 23:02"]
+    ).tz_localize("UTC")
+
+    trades, _, diag = simulate({"TEST": frame}, cfg, initial_equity=100_000.0)
+
+    assert trades == []
+    assert diag["signals_seen"] == 1, "the signal was evaluated before being skipped"
+    assert diag["signals_skipped_by_session"] == 1
+    assert diag["signals_skipped_by_cost_floor"] == 0
+
+
+def test_session_filter_can_be_turned_off(cfg):
+    cfg["filters"]["skip_sessions"] = []
+    frame = _three_bars()
+    frame["timestamp"] = pd.to_datetime(
+        ["2026-01-02 23:00", "2026-01-02 23:01", "2026-01-02 23:02"]
+    ).tz_localize("UTC")
+
+    trades, _, diag = simulate({"TEST": frame}, cfg, initial_equity=100_000.0)
+
+    assert len(trades) == 1
+    assert diag["signals_skipped_by_session"] == 0
+
+
+def test_a_config_without_a_filters_block_takes_every_signal(cfg):
+    """The empty default must reproduce the unfiltered baseline exactly."""
+    cfg.pop("filters", None)
+    frame = _three_bars()
+    frame["timestamp"] = pd.to_datetime(
+        ["2026-01-02 23:00", "2026-01-02 23:01", "2026-01-02 23:02"]
+    ).tz_localize("UTC")
+
+    trades, _, diag = simulate({"TEST": frame}, cfg, initial_equity=100_000.0)
+
+    assert len(trades) == 1
+    assert diag["signals_skipped_by_session"] == 0
+    assert diag["signals_skipped_by_cost_floor"] == 0
+
+
+def test_cost_floor_drops_a_target_worth_less_than_the_round_trip(cfg):
+    """VWAP 1.0991 against a 1.0990 entry pays 0.0001 for a 0.00044 floor."""
+    _costly_cfg(cfg)
+    frame = _three_bars(vwap=1.0991)
+
+    trades, _, diag = simulate({"TEST": frame}, cfg, initial_equity=100_000.0)
+
+    assert trades == []
+    assert diag["signals_skipped_by_cost_floor"] == 1
+    assert diag["signals_skipped_by_session"] == 0, "10:01 UTC is London, not Asia"
+
+
+def test_cost_floor_can_be_turned_off(cfg):
+    _costly_cfg(cfg)
+    cfg["filters"]["min_target_cost_multiple"] = 0
+
+    trades, _, diag = simulate({"TEST": _three_bars(vwap=1.0991)}, cfg, initial_equity=100_000.0)
+
+    assert len(trades) == 1
+    assert diag["signals_skipped_by_cost_floor"] == 0
+
+
+def test_a_target_worth_several_round_trips_is_taken(cfg):
+    """VWAP 1.10 from a 1.0990 entry pays 0.0010, near 7x the round trip."""
+    _costly_cfg(cfg)
+
+    trades, _, diag = simulate({"TEST": _three_bars()}, cfg, initial_equity=100_000.0)
+
+    assert len(trades) == 1
+    assert diag["signals_skipped_by_cost_floor"] == 0
+
+
 # ---------------------------------------------------------------- buckets
 
 @pytest.mark.parametrize(
