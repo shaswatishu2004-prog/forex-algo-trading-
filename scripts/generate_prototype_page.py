@@ -639,6 +639,7 @@ def build_page(window_days: int, sections: str) -> str:
 
   <footer>Quantitative FX Research Engine &#183; Generated from data/processed &#183; <a href="index.html">Dashboard</a> &#183; <a href="findings.html">Findings</a> &#183; <a href="{REPO_URL}" target="_blank" rel="noreferrer">View repository</a></footer>
   <script>{SCRIPT}</script>
+  <script src="app.js" defer></script>
 </body>
 </html>
 '''

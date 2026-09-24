@@ -128,6 +128,8 @@ body {
 .chart .ribbon-up { fill: var(--b-50); }
 .chart .ribbon-low { fill: var(--b-25); }
 .chart .ribbon-down { fill: var(--b-15); }
+/* Overlay rect on downtrend ribbons; the page defines <pattern id="hatch">. */
+.chart .ribbon-hatch { fill: url(#hatch); stroke: none; }
 .chart .hatch-line { stroke: var(--b-70); stroke-width: 1.1; }
 
 /* Depth chart */

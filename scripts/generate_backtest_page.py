@@ -908,6 +908,7 @@ def build_page(results: dict[str, Any]) -> str:
 
   <footer>Quantitative FX Research Engine · Generated from data/backtest/results.json · <a href="index.html">Dashboard</a> · <a href="{REPO_URL}" target="_blank" rel="noreferrer">View repository</a></footer>
   <script>{script}</script>
+  <script src="app.js" defer></script>
 </body>
 </html>
 """

@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="365 days of daily bars replayed through the pre-registered swing variant backtest for DXY, EURUSD, XAUUSD, with equity, folds, costs, and the five-criterion verdict.">
+  <title>Swing backtest replay | Quantitative FX Research Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="findings.css">
+  <style>
+.xtab-wrap { overflow-x: auto; }
+.xtab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.xtab th, .xtab td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
+.xtab th:first-child, .xtab td:first-child { text-align: left; }
+.xtab thead th { color: var(--muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; border-top: 1px solid var(--line); }
+.xtab tbody td { color: var(--text); font-family: var(--mono); font-size: 12px; }
+.xtab tbody td:first-child { font-family: inherit; }
+.xtab tbody td.mute { color: var(--muted); }
+.xtab tbody td.pos { color: var(--green); }
+.xtab tbody td.neg { color: var(--red); }
+.xtab tfoot td { color: var(--b-70); font-weight: 700; font-family: var(--mono); font-size: 12px; border-bottom: 0; border-top: 1px solid var(--line); }
+.xtab tfoot td:first-child { font-family: inherit; color: var(--text); }
+.xtab tfoot td.pos { color: var(--green); }
+.xtab tfoot td.neg { color: var(--red); }
+
+.kpi strong.pos { color: var(--green); }
+.kpi strong.neg { color: var(--red); }
+.kpi strong.mute { color: var(--muted); }
+
+.replay-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+.replay-bar .switch-label { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-right: 2px; }
+.readout { display: flex; flex-wrap: wrap; gap: 10px 26px; padding: 14px 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); margin-bottom: 16px; }
+.readout div span { display: block; color: var(--muted); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.readout div b { display: block; margin-top: 5px; font-family: var(--mono); font-size: 17px; font-variant-numeric: tabular-nums; color: var(--text); }
+.readout div b.pos { color: var(--green); }
+.readout div b.neg { color: var(--red); }
+.readout div b.blue { color: var(--b-70); }
+
+.chart.equity-chart { margin-top: 4px; }
+.chart .grid { stroke: rgba(101, 169, 255, .10); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font-size: 10px; letter-spacing: .04em; }
+.chart .axis-line { stroke: var(--line); stroke-width: 1; }
+.chart .baseline { stroke: var(--b-25); stroke-width: 1; stroke-dasharray: 5 5; }
+.chart .equity { fill: none; stroke: var(--b-50); stroke-width: 1.8; stroke-linejoin: round; }
+.chart .cursor { stroke: var(--amber); stroke-width: 1.2; stroke-dasharray: 4 4; }
+.chart .tick-win { stroke: var(--green); stroke-width: 1.6; }
+.chart .tick-loss { stroke: var(--red); stroke-width: 1.6; }
+.legend i.tick-win { background: var(--green); width: 3px; height: 13px; border-radius: 1px; }
+.legend i.tick-loss { background: var(--red); width: 3px; height: 13px; border-radius: 1px; }
+
+.loop-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 11px; border: 1px solid rgba(245, 196, 106, .45); background: rgba(245, 196, 106, .08); border-radius: 999px; color: var(--amber); font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+.loop-chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); animation: pulse 1.1s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+
+.two-up { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+@media (max-width: 900px) { .two-up { grid-template-columns: 1fr; } }
+
+.chart .fold-bar { fill-opacity: .8; }
+.chart .fold-bar.pos { fill: var(--green); }
+.chart .fold-bar.neg { fill: var(--red); }
+.chart .fold-mark { fill: var(--amber); }
+.legend i.fold-pos { background: var(--green); width: 12px; height: 8px; border-radius: 2px; }
+.legend i.fold-neg { background: var(--red); width: 12px; height: 8px; border-radius: 2px; }
+.legend i.fold-mark { background: var(--amber); width: 3px; height: 13px; border-radius: 1px; }
+</style>
+</head>
+<body>
+  <nav class="nav" aria-label="Primary">
+    <div class="nav-inner">
+      <a class="brand" href="index.html">FX ALGO <span>RESEARCH</span></a>
+      <div class="nav-links">
+        <a href="index.html#strategy">Strategy</a>
+        <a href="index.html#data">Data</a>
+        <a href="index.html#build">Build</a>
+        <a href="index.html#tools">Tools</a>
+        <a href="index.html#gates">Gates</a>
+        <a href="backtest.html">Backtest</a>
+        <a href="swing.html">Swing</a>
+      </div>
+      <div class="nav-actions">
+        <a class="btn btn-primary" href="findings.html">Findings</a>
+        <a class="btn btn-ghost" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-" target="_blank" rel="noreferrer">Repository</a>
+      </div>
+    </div>
+  </nav>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">SWING BACKTEST</p>
+      <h1>365 days of daily bars, on loop</h1>
+      <p class="subtitle">The trailing 365 days of DXY, EURUSD, XAUUSD daily bars run through the swing variant — 20-day Donchian breakouts gated by the trend-only regime, a ratcheted chandelier trail, five criteria registered before any run — then swept across the screen over and over.</p>
+    </div>
+    <span class="status-pill">365 DAYS &#183; 24 TRADES</span>
+  </header>
+
+  <main>
+    <section class="notice" aria-label="Swing backtest note"><strong>Swing backtest report, research only.</strong> This page renders <span class='formula'>data/backtest/swing_results.json</span>: 365 days of daily bars for DXY, EURUSD, XAUUSD run bar by bar through the daily swing variant and replayed on loop below. Spread, commission and slippage are charged on every round trip, plus the flat financing rate once for each session a position is held. It is not live performance and not investment advice. Regenerate with <span class='formula'>python scripts/run_swing_backtest.py</span> then <span class='formula'>python scripts/generate_swing_page.py</span>.</section>
+
+    
+    <ul class="meta-strip" aria-label="Run summary">
+      <li><b>24</b> trades</li>
+      <li class=""><b>+0.74%</b> net</li>
+      <li><b>54.2%</b> hit rate</li>
+      <li><b>839</b> daily bars simulated</li>
+      <li><b>365</b> day window</li>
+    </ul>
+
+    <section class="kpi-grid" aria-label="Headline results"><article class="kpi"><span>Net return</span><strong class="warn">+0.74%</strong><small>after 1.26% of costs, 1.22% of it financing</small></article><article class="kpi"><span>Gross edge</span><strong class="pos">+2.00%</strong><small>before any cost is charged</small></article><article class="kpi"><span>Total costs</span><strong class="neg">-1.26%</strong><small>96% of it is the financing placeholder</small></article><article class="kpi"><span>Trades</span><strong>24</strong><small>126.8% of the window in the market, summed across symbols</small></article><article class="kpi"><span>Hit rate</span><strong class="neg">54.2%</strong><small>spec target was 55 to 65% at 1:1</small></article><article class="kpi"><span>Profit factor</span><strong class="pos">1.51</strong><small>expectancy +30.91 per trade</small></article><article class="kpi"><span>Max drawdown</span><strong class="warn">1.32%</strong><small>recovery never: the window ended below the pre-trough peak</small></article><article class="kpi"><span>Guardrails</span><strong class="neg">2 / 5</strong><small>criteria registered before any run; see the criteria band</small></article></section>
+
+    <section class="band" id="replay">
+      <div class="band-head">
+        <p class="eyebrow">REPLAY</p>
+        <h2 class="band-title">Watch the window run</h2>
+        <span class="band-note">cursor sweeps the window and restarts</span>
+      </div>
+      
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">REPLAY</p><h2>One year of daily bars, on loop</h2></div>
+        <span class="panel-tag">365 days</span>
+      </div>
+      
+    <div class="replay-bar">
+      <span class="switch-label">Replay</span>
+      <button id="btn-play" class="btn btn-primary" type="button">Pause replay</button>
+      <button id="btn-restart" class="btn btn-ghost" type="button">Restart window</button>
+      <button class="btn btn-ghost" data-speed="1" type="button">1x</button>
+      <button class="btn btn-ghost" data-speed="2" type="button">2x</button>
+      <button class="btn btn-ghost" data-speed="4" type="button">4x</button>
+      <span class="loop-chip"><i></i>LOOP <span id="loop-count">1</span></span>
+    </div>
+    <div class="readout" aria-live="off">
+      <div><span>Cursor date</span><b id="ro-date">&mdash;</b></div>
+      <div><span>Equity</span><b id="ro-equity">&mdash;</b></div>
+      <div><span>Net</span><b id="ro-net">&mdash;</b></div>
+      <div><span>Trades closed</span><b id="ro-trades">0</b></div>
+      <div><span>Window elapsed</span><b id="ro-elapsed" class="blue">0 days</b></div>
+    </div><svg class="chart" role="img" aria-label="Equity curve and trade strip" viewBox="0 0 1140 404" preserveAspectRatio="xMidYMid meet"><defs><clipPath id="replay-cut"><rect id="replay-rect" x="76" y="0" width="0" height="404"/></clipPath></defs><line class="axis-line" x1="76" y1="268" x2="1106" y2="268"/><line class="grid" x1="76" y1="268.0" x2="1106" y2="268.0"/><text class="axis" x="66" y="271.5" text-anchor="end">99,792</text><line class="grid" x1="76" y1="206.5" x2="1106" y2="206.5"/><text class="axis" x="66" y="210.0" text-anchor="end">100,363</text><line class="grid" x1="76" y1="145.0" x2="1106" y2="145.0"/><text class="axis" x="66" y="148.5" text-anchor="end">100,934</text><line class="grid" x1="76" y1="83.5" x2="1106" y2="83.5"/><text class="axis" x="66" y="87.0" text-anchor="end">101,505</text><line class="grid" x1="76" y1="22.0" x2="1106" y2="22.0"/><text class="axis" x="66" y="25.5" text-anchor="end">102,076</text><line class="grid" x1="13.9" y1="22" x2="13.9" y2="268"/><text class="axis" x="13.9" y="294" text-anchor="middle">Sep 25</text><line class="grid" x1="98.6" y1="22" x2="98.6" y2="268"/><text class="axis" x="98.6" y="294" text-anchor="middle">Oct 25</text><line class="grid" x1="186.1" y1="22" x2="186.1" y2="268"/><text class="axis" x="186.1" y="294" text-anchor="middle">Nov 25</text><line class="grid" x1="270.7" y1="22" x2="270.7" y2="268"/><text class="axis" x="270.7" y="294" text-anchor="middle">Dec 25</text><line class="grid" x1="358.2" y1="22" x2="358.2" y2="268"/><text class="axis" x="358.2" y="294" text-anchor="middle">Jan 26</text><line class="grid" x1="445.7" y1="22" x2="445.7" y2="268"/><text class="axis" x="445.7" y="294" text-anchor="middle">Feb 26</text><line class="grid" x1="524.7" y1="22" x2="524.7" y2="268"/><text class="axis" x="524.7" y="294" text-anchor="middle">Mar 26</text><line class="grid" x1="612.2" y1="22" x2="612.2" y2="268"/><text class="axis" x="612.2" y="294" text-anchor="middle">Apr 26</text><line class="grid" x1="696.8" y1="22" x2="696.8" y2="268"/><text class="axis" x="696.8" y="294" text-anchor="middle">May 26</text><line class="grid" x1="784.3" y1="22" x2="784.3" y2="268"/><text class="axis" x="784.3" y="294" text-anchor="middle">Jun 26</text><line class="grid" x1="869.0" y1="22" x2="869.0" y2="268"/><text class="axis" x="869.0" y="294" text-anchor="middle">Jul 26</text><line class="grid" x1="956.4" y1="22" x2="956.4" y2="268"/><text class="axis" x="956.4" y="294" text-anchor="middle">Aug 26</text><line class="grid" x1="1043.9" y1="22" x2="1043.9" y2="268"/><text class="axis" x="1043.9" y="294" text-anchor="middle">Sep 26</text><line class="baseline" x1="76" y1="245.6" x2="1106" y2="245.6"/><line class="grid" x1="76" y1="346" x2="1106" y2="346"/><text class="axis" x="66" y="349.5" text-anchor="end">0</text><text class="axis" x="66" y="328" text-anchor="end">pnl</text><line class="grid" x1="13.9" y1="320" x2="13.9" y2="368.0"/><line class="grid" x1="98.6" y1="320" x2="98.6" y2="368.0"/><line class="grid" x1="186.1" y1="320" x2="186.1" y2="368.0"/><line class="grid" x1="270.7" y1="320" x2="270.7" y2="368.0"/><line class="grid" x1="358.2" y1="320" x2="358.2" y2="368.0"/><line class="grid" x1="445.7" y1="320" x2="445.7" y2="368.0"/><line class="grid" x1="524.7" y1="320" x2="524.7" y2="368.0"/><line class="grid" x1="612.2" y1="320" x2="612.2" y2="368.0"/><line class="grid" x1="696.8" y1="320" x2="696.8" y2="368.0"/><line class="grid" x1="784.3" y1="320" x2="784.3" y2="368.0"/><line class="grid" x1="869.0" y1="320" x2="869.0" y2="368.0"/><line class="grid" x1="956.4" y1="320" x2="956.4" y2="368.0"/><line class="grid" x1="1043.9" y1="320" x2="1043.9" y2="368.0"/><g clip-path="url(#replay-cut)"><polyline class="equity" points="78.5,245.6 78.5,245.6 81.3,251.0 84.1,248.7 86.9,246.7 95.4,232.8 98.2,228.2 101.0,226.7 103.9,228.6 106.7,222.7 115.2,209.1 118.0,204.4 120.8,193.8 123.6,197.0 126.4,204.2 134.9,175.1 137.7,176.5 140.6,175.7 143.4,162.3 146.2,169.8 154.7,147.5 157.5,187.6 157.5,181.6 160.3,184.0 163.1,184.6 165.9,185.1 171.6,185.4 174.4,189.4 177.2,191.6 180.1,178.3 182.9,167.8 185.7,161.3 194.2,156.8 197.0,146.1 199.8,147.8 199.8,155.3 199.8,163.9 202.6,163.9 205.5,163.9 208.3,163.9 213.9,163.9 216.7,163.9 219.6,163.9 222.4,163.9 225.2,163.9 228.0,163.9 233.7,163.9 236.5,163.9 239.3,163.9 242.1,163.9 245.0,163.9 247.8,163.9 253.4,163.9 256.2,163.9 259.1,163.9 261.9,163.9 264.7,163.9 267.5,163.9 273.2,163.9 276.0,163.9 278.8,163.9 281.6,167.9 284.5,167.9 287.3,168.9 292.9,169.1 295.8,171.2 298.6,158.5 301.4,143.0 304.2,133.4 307.0,132.5 312.7,128.7 315.5,127.3 318.3,127.9 321.2,134.0 324.0,141.2 326.8,141.4 332.4,110.4 335.3,88.7 338.1,93.2 340.9,93.9 343.7,88.0 343.7,99.8 346.6,100.8 352.2,124.6 352.2,124.5 355.0,129.7 357.8,129.5 360.7,130.4 363.5,134.8 366.3,134.7 369.1,149.8 371.9,149.8 374.8,149.8 377.6,149.8 380.4,149.8 383.2,149.8 386.1,148.5 391.7,162.5 394.5,152.3 397.3,147.0 400.2,133.2 403.0,135.6 405.8,132.5 411.5,143.7 414.3,162.4 414.3,171.2 414.3,171.2 417.1,162.3 419.9,150.7 422.7,142.5 425.6,139.7 431.2,112.7 434.0,48.1 436.9,47.8 439.7,39.0 442.5,55.7 442.5,80.9 442.5,102.4 442.5,102.4 445.3,102.4 451.0,102.4 453.8,102.4 456.6,102.4 459.4,102.4 462.2,102.4 465.1,102.4 470.7,102.4 473.5,102.4 476.4,102.4 479.2,102.4 482.0,102.4 484.8,102.4 490.5,102.4 493.3,102.4 496.1,102.4 498.9,102.4 501.8,102.4 504.6,102.4 510.2,102.4 513.0,102.4 515.9,102.4 518.7,102.4 521.5,102.4 524.3,102.4 530.0,102.4 532.8,93.2 535.6,100.9 538.4,90.1 541.3,92.2 544.1,98.1 549.7,100.6 552.6,93.8 555.4,81.3 558.2,63.3 561.0,43.5 569.5,65.0 572.3,75.8 575.1,50.5 577.9,87.0 580.8,80.8 589.2,95.4 589.2,102.6 592.1,100.1 594.9,91.2 597.7,90.7 600.5,80.3 606.2,88.6 609.0,88.6 611.8,88.6 614.6,88.6 617.5,88.6 620.3,88.6 628.7,88.6 631.6,88.6 634.4,88.6 637.2,88.6 640.0,88.6 648.5,88.6 651.3,88.6 654.1,87.9 657.0,90.1 659.8,92.1 668.2,89.1 671.1,94.5 673.9,98.4 676.7,100.9 679.5,96.8 688.0,96.8 690.8,97.8 693.6,101.6 696.5,95.6 699.3,97.1 707.8,100.1 710.6,99.9 713.4,93.8 716.2,96.3 719.0,89.6 727.5,89.8 730.3,94.8 730.3,101.9 733.2,101.9 736.0,101.9 738.8,101.9 747.3,107.9 750.1,102.4 752.9,96.8 755.7,103.8 758.6,102.8 767.0,108.0 769.8,105.4 772.7,104.5 775.5,110.9 778.3,114.9 786.8,106.9 789.6,106.8 792.4,96.7 795.2,100.9 798.1,78.3 806.5,79.7 809.3,72.8 812.2,56.0 815.0,74.1 817.8,77.6 823.5,99.0 826.3,99.0 829.1,100.8 831.9,105.2 831.9,105.2 834.7,105.2 837.6,108.3 846.0,98.4 848.9,85.2 851.7,78.8 854.5,83.6 857.3,93.2 865.8,96.6 868.6,95.5 871.4,86.0 874.2,110.0 877.1,115.4 885.5,115.2 888.4,102.8 891.2,101.0 894.0,108.5 896.8,104.7 905.3,86.3 908.1,101.8 910.9,125.5 910.9,125.5 913.8,115.8 913.8,124.4 916.6,127.5 925.0,127.0 927.9,132.4 930.7,136.6 930.7,137.6 933.5,137.6 936.3,137.6 944.8,137.6 947.6,137.6 950.4,137.6 953.3,137.6 956.1,137.6 964.6,137.6 967.4,137.6 970.2,137.6 973.0,137.6 975.8,137.6 984.3,133.5 987.1,135.3 989.9,131.7 992.8,137.0 995.6,134.8 1004.1,131.1 1006.9,138.8 1009.7,121.2 1012.5,122.4 1015.3,112.8 1023.8,117.1 1026.6,113.2 1029.5,128.3 1032.3,126.9 1035.1,166.2 1035.1,166.2 1037.9,165.4 1043.6,166.4 1043.6,166.4 1046.4,170.6 1049.2,179.2 1049.2,179.2 1052.0,179.2 1054.9,179.2 1057.7,179.2 1063.3,179.2 1066.1,179.2 1069.0,179.2 1071.8,179.2 1074.6,179.2 1077.4,179.2 1083.1,179.2 1085.9,179.2 1088.7,179.2 1091.5,181.3 1094.4,182.8 1097.2,184.0 1102.8,179.0 1105.6,175.7 1108.5,165.7"/><line class="tick-win" x1="157.5" y1="346" x2="157.5" y2="330.6"/><line class="tick-win" x1="199.8" y1="346" x2="199.8" y2="342.6"/><line class="tick-win" x1="199.8" y1="346" x2="199.8" y2="345.6"/><line class="tick-win" x1="343.7" y1="346" x2="343.7" y2="343.9"/><line class="tick-loss" x1="369.1" y1="346" x2="369.1" y2="347.2"/><line class="tick-win" x1="352.2" y1="346" x2="352.2" y2="343.6"/><line class="tick-loss" x1="414.3" y1="346" x2="414.3" y2="350.9"/><line class="tick-loss" x1="414.3" y1="346" x2="414.3" y2="350.9"/><line class="tick-win" x1="442.5" y1="346" x2="442.5" y2="328.0"/><line class="tick-win" x1="442.5" y1="346" x2="442.5" y2="344.3"/><line class="tick-win" x1="442.5" y1="346" x2="442.5" y2="344.7"/><line class="tick-win" x1="606.2" y1="346" x2="606.2" y2="340.9"/><line class="tick-loss" x1="589.2" y1="346" x2="589.2" y2="347.9"/><line class="tick-loss" x1="730.3" y1="346" x2="730.3" y2="349.1"/><line class="tick-loss" x1="823.5" y1="346" x2="823.5" y2="348.3"/><line class="tick-win" x1="831.9" y1="346" x2="831.9" y2="344.5"/><line class="tick-loss" x1="910.9" y1="346" x2="910.9" y2="349.5"/><line class="tick-loss" x1="913.8" y1="346" x2="913.8" y2="347.5"/><line class="tick-loss" x1="930.7" y1="346" x2="930.7" y2="348.6"/><line class="tick-win" x1="1043.6" y1="346" x2="1043.6" y2="345.1"/><line class="tick-loss" x1="1035.1" y1="346" x2="1035.1" y2="351.2"/><line class="tick-loss" x1="1049.2" y1="346" x2="1049.2" y2="351.3"/><line class="tick-win" x1="1108.5" y1="346" x2="1108.5" y2="344.2"/><line class="tick-win" x1="1108.5" y1="346" x2="1108.5" y2="344.7"/></g><line id="cursor" class="cursor" x1="76" y1="22" x2="76" y2="368.0"/></svg><div class="legend"><span><i class="ln"></i>Equity curve</span><span><i class="tick-win"></i>Winning exit</span><span><i class="tick-loss"></i>Losing exit</span><span><i class="dash"></i>Starting equity</span></div><p class="caption">The cursor sweeps the window, reveals the curve and the exit ticks as it goes, then wraps to the first point and starts again. Signals decide at a daily bar close and fill at the next daily open (the 21:00 UTC roll), so a Friday signal fills at Sunday's roll. Of the 24 exits, 13 on the trail, 9 at the hold cap, 2 at the window edge. Each fill pays spread, commission, slippage and one financing session for every daily bar held.</p>
+    </section>
+    </section>
+
+    <section class="band" id="criteria">
+      <div class="band-head">
+        <p class="eyebrow">CRITERIA</p>
+        <h2 class="band-title">The pre-registered verdict</h2>
+        <span class="band-note">5 criteria, registered before any run</span>
+      </div>
+      <div class="grid two-up">
+        
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">CRITERIA</p><h2>Five criteria, registered before any run</h2></div>
+        <span class="panel-tag">2 / 5 pass</span>
+      </div>
+      <ul class="gate-list"><li><span class="gate-dot red"></span><div><b>Gross over three times costs</b><small>Gross +2.00% against the +3.79% required — three times the +1.26% of round-trip costs.</small></div></li><li><span class="gate-dot green"></span><div><b>Profit factor over 1.30</b><small>Profit factor 1.51 against a floor of 1.3.</small></div></li><li><span class="gate-dot green"></span><div><b>Positive skew</b><small>Trade pnl skew 1.85 against a floor of 0.00.</small></div></li><li><span class="gate-dot red"></span><div><b>Every fold nets positive</b><small>Worst fold -0.26% against a floor of +0.00%; 3 of 6 folds net negative.</small></div></li><li><span class="gate-dot red"></span><div><b>Locked test green at 2x costs</b><small>Locked block -0.41% with spread, commission, slippage and financing all doubled, against a floor of +0.00%.</small></div></li><li><span class="gate-dot red"></span><div><b>All-in stress at 2x costs</b><small>Spread, commission, slippage and financing doubled together: -0.52% net, PF 0.77, hit 45.8%.</small></div></li><li><span class="gate-dot amber"></span><div><b>2 of 5 criteria pass</b><small>Criteria registered in docs/wayfinder/tickets/swing-variant.md before any run; the stress row doubles spread, commission, slippage and financing together.</small></div></li></ul>
+    </section>
+        
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">WALK-FORWARD</p><h2>Anchored blocks with a locked final test</h2></div>
+        <span class="panel-tag">anchored walk forward</span>
+      </div>
+      <div class="xtab-wrap"><table class="xtab"><thead><tr><th>Block</th><th>Range</th><th>Role</th><th>Trades</th><th>Net return</th><th>Hit rate</th><th>PF</th></tr></thead><tbody><tr><td>#0</td><td>2025-09-23 to 2025-11-22</td><td>Seed</td><td>3</td><td class="pos">+0.76%</td><td>100.0%</td><td>n/a</td></tr><tr><td>#1</td><td>2025-11-22 to 2026-01-22</td><td>Walk-forward</td><td>6</td><td class="pos">+0.45%</td><td>50.0%</td><td>2.04</td></tr><tr><td>#2</td><td>2026-01-22 to 2026-03-24</td><td>Walk-forward</td><td>4</td><td class="pos">+0.24%</td><td>75.0%</td><td>4.30</td></tr><tr><td>#3</td><td>2026-03-24 to 2026-05-24</td><td>Walk-forward</td><td>2</td><td class="neg">-0.21%</td><td>0.0%</td><td>0.00</td></tr><tr><td>#4</td><td>2026-05-24 to 2026-07-24</td><td>Walk-forward</td><td>4</td><td class="neg">-0.24%</td><td>25.0%</td><td>0.20</td></tr><tr><td>#5</td><td>2026-07-24 to 2026-09-23</td><td>Locked test</td><td>5</td><td class="neg">-0.26%</td><td>60.0%</td><td>0.38</td></tr></tbody><tfoot><tr><td>Development</td><td>Everything except the last block</td><td>Anchored</td><td>19</td><td class="pos">+1.00%</td><td>52.6%</td><td>1.98</td></tr></tfoot></table></div><p class="caption">Block 0 seeds the walk-forward; the last block is the locked final test and was never used to adjust the rules. Development 19 trades at +1.00% with PF 1.98; locked test 5 trades at -0.26% with PF 0.38. Profit factor reads n/a on a fold with no losing trade and 0.00 on a fold with no winning trade.</p>
+    </section>
+      </div>
+      
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">BLOCKS</p><h2>Net return by walk-forward block</h2></div>
+        <span class="panel-tag">6 folds</span>
+      </div>
+      <svg class="chart" role="img" aria-label="Fold net returns at base and stressed costs" viewBox="0 0 1140 326" preserveAspectRatio="xMidYMid meet"><line class="grid" x1="256.7" y1="14" x2="256.7" y2="292"/><text class="axis" x="256.7" y="310" text-anchor="middle">-0.4%</text><line class="grid" x1="384.3" y1="14" x2="384.3" y2="292"/><text class="axis" x="384.3" y="310" text-anchor="middle">-0.2%</text><line class="grid" x1="511.8" y1="14" x2="511.8" y2="292"/><text class="axis" x="511.8" y="310" text-anchor="middle">0%</text><line class="grid" x1="639.4" y1="14" x2="639.4" y2="292"/><text class="axis" x="639.4" y="310" text-anchor="middle">+0.2%</text><line class="grid" x1="767.0" y1="14" x2="767.0" y2="292"/><text class="axis" x="767.0" y="310" text-anchor="middle">+0.4%</text><line class="grid" x1="894.5" y1="14" x2="894.5" y2="292"/><text class="axis" x="894.5" y="310" text-anchor="middle">+0.6%</text><line class="grid" x1="1022.1" y1="14" x2="1022.1" y2="292"/><text class="axis" x="1022.1" y="310" text-anchor="middle">+0.8%</text><line class="baseline" x1="511.8" y1="14" x2="511.8" y2="292"/><text class="axis" x="120" y="42.5" text-anchor="end">Fold 0 · seed</text><rect class="fold-bar pos" x="511.8" y="24" width="484.1" height="30" rx="3"/><rect class="fold-mark" x="877.9" y="20" width="3" height="38" rx="1.5"/><text class="axis" x="1002.9" y="42.5" text-anchor="start">+0.76%</text><text class="axis" x="120" y="86.5" text-anchor="end">Fold 1</text><rect class="fold-bar pos" x="511.8" y="68" width="289.7" height="30" rx="3"/><rect class="fold-mark" x="556.7" y="64" width="3" height="38" rx="1.5"/><text class="axis" x="808.5" y="86.5" text-anchor="start">+0.45%</text><text class="axis" x="120" y="130.5" text-anchor="end">Fold 2</text><rect class="fold-bar pos" x="511.8" y="112" width="155.8" height="30" rx="3"/><rect class="fold-mark" x="527.9" y="108" width="3" height="38" rx="1.5"/><text class="axis" x="674.6" y="130.5" text-anchor="start">+0.24%</text><text class="axis" x="120" y="174.5" text-anchor="end">Fold 3</text><rect class="fold-bar neg" x="376.0" y="156" width="135.9" height="30" rx="3"/><rect class="fold-mark" x="278.9" y="152" width="3" height="38" rx="1.5"/><text class="axis" x="369.0" y="174.5" text-anchor="end">-0.21%</text><text class="axis" x="120" y="218.5" text-anchor="end">Fold 4</text><rect class="fold-bar neg" x="357.5" y="200" width="154.3" height="30" rx="3"/><rect class="fold-mark" x="236.6" y="196" width="3" height="38" rx="1.5"/><text class="axis" x="350.5" y="218.5" text-anchor="end">-0.24%</text><text class="axis" x="120" y="262.5" text-anchor="end">Fold 5 · locked</text><rect class="fold-bar neg" x="345.7" y="244" width="166.1" height="30" rx="3"/><rect class="fold-mark" x="251.7" y="240" width="3" height="38" rx="1.5"/><text class="axis" x="338.7" y="262.5" text-anchor="end">-0.26%</text><line class="axis-line" x1="132" y1="292" x2="1102" y2="292"/></svg><div class="legend"><span><i class="fold-pos"></i>Net fold return</span><span><i class="fold-neg"></i>Negative fold</span><span><i class="fold-mark"></i>Same fold at 2x costs</span></div><p class="caption">3 of 6 folds net positive at base costs; the worst is fold 5 at -0.26%. The amber marks restate each fold with spread, commission, slippage and financing doubled together: the positive folds shrink to as little as +0.03% and every negative fold deepens.</p>
+    </section>
+    </section>
+
+    <section class="band" id="report">
+      <div class="band-head">
+        <p class="eyebrow">REPORT</p>
+        <h2 class="band-title">Strategy-spec report</h2>
+        <span class="band-note">every figure recomputed from swing_results.json</span>
+      </div>
+      <div class="grid two-up">
+        
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">COSTS</p><h2>Where the money went</h2></div>
+        <span class="panel-tag">+1.26% total</span>
+      </div>
+      <div class="xtab-wrap"><table class="xtab"><thead><tr><th>Line</th><th>Percent of starting equity</th></tr></thead><tbody><tr><td>Gross edge before costs</td><td class="pos">+2.00%</td></tr><tr><td>Spread</td><td class="neg">-0.02%</td></tr><tr><td>Commission</td><td class="neg">-0.02%</td></tr><tr><td>Slippage</td><td class="neg">-0.01%</td></tr><tr><td>Financing across 21:00</td><td class="neg">-1.22%</td></tr></tbody><tfoot><tr><td>Total costs</td><td class="neg">+1.26%</td></tr></tfoot></table></div><p class="caption">Costs are decimal returns on notional per symbol, charged on every round trip, plus <span class='formula'>costs.financing_per_session</span> once for every daily bar a position is held. Financing is 96% of the +1.26% total; spread, commission and slippage together are +0.05%.</p>
+    </section>
+        
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">FINANCING</p><h2>The placeholder that decides the sign</h2></div>
+        <span class="panel-tag">0x / 1x / 2x</span>
+      </div>
+      <div class="xtab-wrap"><table class="xtab"><thead><tr><th>Financing rate</th><th>Net return</th></tr></thead><tbody><tr><td>Financing removed (0x)</td><td class="pos">+1.96%</td></tr><tr><td>As charged (1x)</td><td class="pos">+0.74%</td></tr><tr><td>Financing doubled (2x)</td><td class="neg">-0.47%</td></tr></tbody></table></div><p class="caption">The flat 0.00025 per-session placeholder is charged once per daily bar held: 1.22 of the 1.26 points of cost, 26x the 0.05 points of spread, commission and slippage combined. At 2x the net flips to -0.47%, so signed per-symbol broker swap rates are required before live.</p>
+    </section>
+      </div>
+      <div class="grid two-up">
+        
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">SENSITIVITY</p><h2>Cost and fill variations on the same trades</h2></div>
+        <span class="panel-tag">5 variations</span>
+      </div>
+      <div class="xtab-wrap"><table class="xtab"><thead><tr><th>Variation</th><th>Trades</th><th>Net return</th><th>Hit rate</th><th>PF</th></tr></thead><tbody><tr><td>As simulated, financing included</td><td>24</td><td class="pos">+0.74%</td><td>54.2%</td><td>1.51</td></tr><tr><td>Spread doubled, financing excluded</td><td>24</td><td class="pos">+1.93%</td><td>54.2%</td><td>1.51</td></tr><tr><td>Slippage doubled, financing excluded</td><td>24</td><td class="pos">+1.95%</td><td>54.2%</td><td>1.51</td></tr><tr><td>Spread and slippage doubled, financing excluded</td><td>24</td><td class="pos">+1.93%</td><td>54.2%</td><td>1.51</td></tr><tr><td>One trade in ten missed, financing excluded</td><td>22</td><td class="pos">+1.82%</td><td>50.0%</td><td>1.44</td></tr><tr><td>Delayed execution (2 bars to fill)</td><td>23</td><td class="pos">+0.62%</td><td>39.1%</td><td>1.48</td></tr></tbody></table></div><p class="caption">The base and delayed rows are full nets including financing; the four restated rows charge spread, commission and slippage only — financing is excluded (the one-minute parity convention) — which is why they read above base. The all-in stress that doubles all four cost lines together lands at -0.52% in the criteria panel. Variants hold entry notional fixed; only delayed execution re-runs sizing.</p>
+    </section>
+        
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">RISK</p><h2>Tail statistics over the window</h2></div>
+        <span class="panel-tag">365 days</span>
+      </div>
+      <ul class="gate-list"><li><span class="gate-dot amber"></span><div><b>Worst day</b><small>-0.58% on the worst single day.</small></div></li><li><span class="gate-dot amber"></span><div><b>Worst month</b><small>-0.39% on the worst calendar month.</small></div></li><li><span class="gate-dot amber"></span><div><b>Losing streak</b><small>3 consecutive losing trades.</small></div></li><li><span class="gate-dot blue"></span><div><b>Average trade</b><small>win 168.37 against loss -131.54 on 24 trades, expectancy +30.91 per trade.</small></div></li><li><span class="gate-dot blue"></span><div><b>Exposure</b><small>126.85% of the window held a position, summed across the three symbols, which can overlap.</small></div></li><li><span class="gate-dot blue"></span><div><b>Volatility</b><small>1.49% annualized on daily equity, Sharpe 0.44 and Sortino 0.45.</small></div></li></ul>
+    </section>
+      </div>
+      <div class="grid two-up">
+        
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">DIAGNOSTICS</p><h2>How the run was produced</h2></div>
+        <span class="panel-tag">engine counters</span>
+      </div>
+      <ul class="gate-list"><li><span class="gate-dot blue"></span><div><b>Daily bars simulated</b><small>DXY 278 · EURUSD 285 · XAUUSD 276 (839 total).</small></div></li><li><span class="gate-dot blue"></span><div><b>Signals seen</b><small>24 breakout fills evaluated; 45 rejected by the regime gate before any fill.</small></div></li><li><span class="gate-dot blue"></span><div><b>Entry gate</b><small>swing_admits is trend_only: uptrend lets longs through, downtrend shorts, nothing else.</small></div></li><li><span class="gate-dot blue"></span><div><b>One-minute filters</b><small>The one-minute filters (skip_sessions, min_target_cost_multiple) do not apply to swing entries; the gate is swing_admits.</small></div></li><li><span class="gate-dot blue"></span><div><b>Daily loss halts</b><small>0 days stopped for new entries after the daily loss cap.</small></div></li><li><span class="gate-dot blue"></span><div><b>Drawdown limit</b><small>Never reached the +15% portfolio limit; recorded rather than enforced, so the report keeps every day.</small></div></li><li><span class="gate-dot blue"></span><div><b>News bucket</b><small>No news calendar is staged in this repository, so the news bucket is reported as unavailable rather than inferred from volatility.</small></div></li><li><span class="gate-dot blue"></span><div><b>Generation</b><small>2026-09-24T16:35:17+00:00 · schema 1.0 · 0.15s to run.</small></div></li></ul>
+    </section>
+        
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">SCOPE</p><h2>What this variant trades</h2></div>
+        <span class="panel-tag">donchian_20d_swing_v1</span>
+      </div>
+      <ul class="gate-list"><li><span class="gate-dot blue"></span><div><b>Signal</b><small>donchian_20d_swing_v1: a 20-day Donchian channel measured over bars t-20 to t-1, so the window excludes the signal bar itself.</small></div></li><li><span class="gate-dot blue"></span><div><b>Entries</b><small>Decided at the daily bar close, filled at the next daily open — the 21:00 UTC roll; a weekend signal fills at Sunday's roll.</small></div></li><li><span class="gate-dot blue"></span><div><b>Exits</b><small>A ratcheted chandelier trail that never loosens, an opposite-regime flip filled at the next open, a 20-session hold cap, and a forced close at the window edge.</small></div></li><li><span class="gate-dot blue"></span><div><b>Sessions</b><small>Every fill books on the roll, so all 24 trades land in the asia session bucket; the flat spread model understates roll spreads and the 2x stress is the partial mitigation.</small></div></li><li><span class="gate-dot blue"></span><div><b>Fill delay</b><small>Entries fill 1 bar after the signal; the sensitivity panel shows the two-bar variant.</small></div></li></ul>
+    </section>
+      </div>
+      <p class="caption">Swing variant: daily bars over a trailing year, so Sharpe and Sortino rest on roughly 250 equity points; they are not comparable to the one-minute report and say little about tails.</p>
+    </section>
+
+    <section class="band" id="breakdowns">
+      <div class="band-head">
+        <p class="eyebrow">BREAKDOWNS</p>
+        <h2 class="band-title">Where the return came from</h2>
+        <span class="band-note">same trades, cut five ways</span>
+      </div>
+      <div class="grid two-up">
+        
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">BREAKDOWN</p><h2>By symbol</h2></div>
+        <span class="panel-tag">3 buckets</span>
+      </div>
+      <div class="xtab-wrap"><table class="xtab"><thead><tr><th>Bucket</th><th>Trades</th><th>Net return</th><th>Hit rate</th><th>PF</th></tr></thead><tbody><tr><td>DXY</td><td>9</td><td class="neg">-0.24%</td><td>44.4%</td><td>0.64</td></tr><tr><td>EURUSD</td><td>9</td><td class="neg">-0.43%</td><td>44.4%</td><td>0.35</td></tr><tr><td>XAUUSD</td><td>6</td><td class="pos">+1.41%</td><td>83.3%</td><td>14.82</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">BREAKDOWN</p><h2>By signal kind</h2></div>
+        <span class="panel-tag">1 buckets</span>
+      </div>
+      <div class="xtab-wrap"><table class="xtab"><thead><tr><th>Bucket</th><th>Trades</th><th>Net return</th><th>Hit rate</th><th>PF</th></tr></thead><tbody><tr><td>donchian breakout</td><td>24</td><td class="pos">+0.74%</td><td>54.2%</td><td>1.51</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">BREAKDOWN</p><h2>By daily regime</h2></div>
+        <span class="panel-tag">2 buckets</span>
+      </div>
+      <div class="xtab-wrap"><table class="xtab"><thead><tr><th>Bucket</th><th>Trades</th><th>Net return</th><th>Hit rate</th><th>PF</th></tr></thead><tbody><tr><td>downtrend</td><td>10</td><td class="neg">-0.49%</td><td>40.0%</td><td>0.29</td></tr><tr><td>uptrend</td><td>14</td><td class="pos">+1.23%</td><td>64.3%</td><td>2.62</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">BREAKDOWN</p><h2>By session</h2></div>
+        <span class="panel-tag">1 buckets</span>
+      </div>
+      <div class="xtab-wrap"><table class="xtab"><thead><tr><th>Bucket</th><th>Trades</th><th>Net return</th><th>Hit rate</th><th>PF</th></tr></thead><tbody><tr><td>asia</td><td>24</td><td class="pos">+0.74%</td><td>54.2%</td><td>1.51</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">BREAKDOWN</p><h2>By volatility bucket</h2></div>
+        <span class="panel-tag">2 buckets</span>
+      </div>
+      <div class="xtab-wrap"><table class="xtab"><thead><tr><th>Bucket</th><th>Trades</th><th>Net return</th><th>Hit rate</th><th>PF</th></tr></thead><tbody><tr><td>low</td><td>11</td><td class="pos">+0.01%</td><td>63.6%</td><td>1.01</td></tr><tr><td>mid</td><td>13</td><td class="pos">+0.73%</td><td>46.2%</td><td>1.92</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">NOT AVAILABLE</p><h2>By news bucket</h2></div>
+        <span class="panel-tag">no calendar</span>
+      </div>
+      <div class="prose"><p>No news calendar is staged in this repository, so the news bucket is reported as unavailable rather than inferred from volatility.</p></div>
+    </section>
+      </div>
+    </section>
+
+    <section class="band" id="trades">
+      <div class="band-head">
+        <p class="eyebrow">TRADES</p>
+        <h2 class="band-title">Every fill in the window</h2>
+        <span class="band-note">24 rows, fold #5 is locked</span>
+      </div>
+      
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="eyebrow">EVERY FILL</p><h2>All 24 trades</h2></div>
+        <span class="panel-tag">fold #5 locked</span>
+      </div>
+      <div class="xtab-wrap"><table class="xtab"><thead><tr><th>#</th><th>Symbol</th><th>Dir</th><th>Regime</th><th>Session</th><th>Entry</th><th>Exit</th><th>Reason</th><th>PnL</th><th>Net %</th><th>Fold</th></tr></thead><tbody><tr><td>1</td><td>XAUUSD</td><td>long</td><td>uptrend</td><td>2025-09-23</td><td>2025-09-23</td><td>2025-10-21</td><td>trail</td><td class="pos">+611.05</td><td class="pos">+9.31%</td><td>#0</td></tr><tr><td>2</td><td>DXY</td><td>long</td><td>uptrend</td><td>2025-10-08</td><td>2025-10-08</td><td>2025-11-05</td><td>hold cap</td><td class="pos">+133.41</td><td class="pos">+0.91%</td><td>#0</td></tr><tr><td>3</td><td>EURUSD</td><td>short</td><td>downtrend</td><td>2025-10-09</td><td>2025-10-09</td><td>2025-11-05</td><td>hold cap</td><td class="pos">+14.50</td><td class="pos">+0.11%</td><td>#0</td></tr><tr><td>4</td><td>EURUSD</td><td>long</td><td>uptrend</td><td>2025-12-03</td><td>2025-12-03</td><td>2025-12-26</td><td>hold cap</td><td class="pos">+81.93</td><td class="pos">+0.40%</td><td>#1</td></tr><tr><td>5</td><td>DXY</td><td>short</td><td>downtrend</td><td>2025-12-10</td><td>2025-12-10</td><td>2026-01-04</td><td>hold cap</td><td class="neg">-46.69</td><td class="neg">-0.22%</td><td>#1</td></tr><tr><td>6</td><td>XAUUSD</td><td>long</td><td>uptrend</td><td>2025-12-11</td><td>2025-12-11</td><td>2025-12-29</td><td>trail</td><td class="pos">+95.13</td><td class="pos">+1.80%</td><td>#1</td></tr><tr><td>7</td><td>EURUSD</td><td>short</td><td>downtrend</td><td>2026-01-09</td><td>2026-01-09</td><td>2026-01-20</td><td>trail</td><td class="neg">-195.62</td><td class="neg">-0.79%</td><td>#1</td></tr><tr><td>8</td><td>DXY</td><td>long</td><td>uptrend</td><td>2026-01-09</td><td>2026-01-09</td><td>2026-01-20</td><td>trail</td><td class="neg">-196.06</td><td class="neg">-0.79%</td><td>#1</td></tr><tr><td>9</td><td>XAUUSD</td><td>long</td><td>uptrend</td><td>2026-01-12</td><td>2026-01-12</td><td>2026-01-30</td><td>trail</td><td class="pos">+715.53</td><td class="pos">+13.13%</td><td>#1</td></tr><tr><td>10</td><td>EURUSD</td><td>long</td><td>uptrend</td><td>2026-01-23</td><td>2026-01-23</td><td>2026-01-30</td><td>trail</td><td class="pos">+65.97</td><td class="pos">+0.36%</td><td>#2</td></tr><tr><td>11</td><td>DXY</td><td>short</td><td>downtrend</td><td>2026-01-23</td><td>2026-01-23</td><td>2026-01-30</td><td>trail</td><td class="pos">+50.42</td><td class="pos">+0.26%</td><td>#2</td></tr><tr><td>12</td><td>DXY</td><td>long</td><td>uptrend</td><td>2026-03-02</td><td>2026-03-02</td><td>2026-03-29</td><td>hold cap</td><td class="pos">+201.78</td><td class="pos">+1.12%</td><td>#2</td></tr><tr><td>13</td><td>EURUSD</td><td>short</td><td>downtrend</td><td>2026-03-03</td><td>2026-03-03</td><td>2026-03-23</td><td>trail</td><td class="neg">-73.98</td><td class="neg">-0.49%</td><td>#2</td></tr><tr><td>14</td><td>EURUSD</td><td>long</td><td>uptrend</td><td>2026-04-14</td><td>2026-04-14</td><td>2026-05-12</td><td>hold cap</td><td class="neg">-122.96</td><td class="neg">-1.01%</td><td>#3</td></tr><tr><td>15</td><td>DXY</td><td>long</td><td>uptrend</td><td>2026-05-15</td><td>2026-05-17</td><td>2026-06-14</td><td>hold cap</td><td class="neg">-90.04</td><td class="neg">-0.58%</td><td>#3</td></tr><tr><td>16</td><td>XAUUSD</td><td>short</td><td>downtrend</td><td>2026-05-27</td><td>2026-05-27</td><td>2026-06-17</td><td>trail</td><td class="pos">+59.15</td><td class="pos">+1.65%</td><td>#4</td></tr><tr><td>17</td><td>DXY</td><td>long</td><td>uptrend</td><td>2026-06-18</td><td>2026-06-18</td><td>2026-07-15</td><td>trail</td><td class="neg">-140.34</td><td class="neg">-0.90%</td><td>#4</td></tr><tr><td>18</td><td>EURUSD</td><td>short</td><td>downtrend</td><td>2026-06-18</td><td>2026-06-18</td><td>2026-07-16</td><td>hold cap</td><td class="neg">-58.45</td><td class="neg">-0.39%</td><td>#4</td></tr><tr><td>19</td><td>XAUUSD</td><td>short</td><td>downtrend</td><td>2026-06-24</td><td>2026-06-24</td><td>2026-07-22</td><td>hold cap</td><td class="neg">-102.30</td><td class="neg">-3.52%</td><td>#4</td></tr><tr><td>20</td><td>XAUUSD</td><td>long</td><td>uptrend</td><td>2026-08-07</td><td>2026-08-09</td><td>2026-08-31</td><td>trail</td><td class="pos">+35.04</td><td class="pos">+0.95%</td><td>#5</td></tr><tr><td>21</td><td>DXY</td><td>short</td><td>downtrend</td><td>2026-08-19</td><td>2026-08-19</td><td>2026-08-28</td><td>trail</td><td class="neg">-208.68</td><td class="neg">-1.15%</td><td>#5</td></tr><tr><td>22</td><td>EURUSD</td><td>long</td><td>uptrend</td><td>2026-08-19</td><td>2026-08-19</td><td>2026-09-02</td><td>trail</td><td class="neg">-211.78</td><td class="neg">-1.15%</td><td>#5</td></tr><tr><td>23</td><td>EURUSD</td><td>short</td><td>downtrend</td><td>2026-09-16</td><td>2026-09-16</td><td>2026-09-23</td><td>end of window</td><td class="pos">+71.41</td><td class="pos">+0.33%</td><td>#5</td></tr><tr><td>24</td><td>DXY</td><td>long</td><td>uptrend</td><td>2026-09-22</td><td>2026-09-22</td><td>2026-09-23</td><td>end of window</td><td class="pos">+53.54</td><td class="pos">+0.27%</td><td>#5</td></tr></tbody></table></div><p class="caption">Session is the signal session; entries fill at the next daily open (the 21:00 UTC roll — a Friday signal fills at Sunday's roll) and exits fill at the trail touch or the roll after a hold-cap, regime-flip or window decision. PnL is in account currency on the trade's own notional, and Net % is that trade's return, not on account equity. Fold #5 is the locked final test.</p>
+    </section>
+    </section>
+  </main>
+
+  <footer>Quantitative FX Research Engine · Generated from data/backtest/swing_results.json · <a href="index.html">Dashboard</a> · <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-" target="_blank" rel="noreferrer">View repository</a></footer>
+  <script>
+(function () {
+  var LEFT = 76;
+  var PLOT_W = 1030;
+  var T0 = 1758565800000;
+  var T1 = 1790101800000;
+  var CYCLE = 16000;
+  var PTS = [[1758641400000, 100000.0], [1758641400000, 100000.0], [1758727800000, 99949.63], [1758814200000, 99971.6], [1758900600000, 99990.08], [1759159800000, 100118.95], [1759246200000, 100161.54], [1759332600000, 100175.57], [1759419000000, 100158.37], [1759505400000, 100212.9], [1759764600000, 100338.74], [1759851000000, 100382.62], [1759937400000, 100481.22], [1760023800000, 100450.93], [1760110200000, 100384.56], [1760369400000, 100654.36], [1760455800000, 100642.07], [1760542200000, 100649.16], [1760628600000, 100773.53], [1760715000000, 100703.68], [1760974200000, 100910.43], [1761060600000, 100538.38], [1761060600000, 100594.2], [1761147000000, 100572.3], [1761233400000, 100566.66], [1761319800000, 100561.6], [1761492600000, 100559.23], [1761579000000, 100521.52], [1761665400000, 100501.84], [1761751800000, 100625.32], [1761838200000, 100722.82], [1761924600000, 100782.59], [1762183800000, 100824.15], [1762270200000, 100923.44], [1762356600000, 100908.32], [1762356600000, 100838.13], [1762356600000, 100758.95], [1762443000000, 100758.95], [1762529400000, 100758.95], [1762615800000, 100758.95], [1762788600000, 100758.95], [1762875000000, 100758.95], [1762961400000, 100758.95], [1763047800000, 100758.95], [1763134200000, 100758.95], [1763220600000, 100758.95], [1763393400000, 100758.95], [1763479800000, 100758.95], [1763566200000, 100758.95], [1763652600000, 100758.95], [1763739000000, 100758.95], [1763825400000, 100758.95], [1763998200000, 100758.95], [1764084600000, 100758.95], [1764171000000, 100758.95], [1764257400000, 100758.95], [1764343800000, 100758.95], [1764430200000, 100758.95], [1764603000000, 100758.95], [1764689400000, 100758.95], [1764775800000, 100758.95], [1764862200000, 100721.33], [1764948600000, 100721.33], [1765035000000, 100712.19], [1765207800000, 100710.61], [1765294200000, 100690.92], [1765380600000, 100808.88], [1765467000000, 100952.2], [1765553400000, 101041.48], [1765639800000, 101050.48], [1765812600000, 101085.29], [1765899000000, 101098.6], [1765985400000, 101092.9], [1766071800000, 101036.31], [1766158200000, 100969.05], [1766244600000, 100967.72], [1766417400000, 101254.9], [1766503800000, 101456.89], [1766590200000, 101415.31], [1766676600000, 101408.1], [1766763000000, 101463.62], [1766763000000, 101353.41], [1766849400000, 101344.64], [1767022200000, 101123.82], [1767022200000, 101124.66], [1767108600000, 101075.97], [1767195000000, 101077.66], [1767281400000, 101069.65], [1767367800000, 101028.96], [1767454200000, 101029.6], [1767540600000, 100889.32], [1767627000000, 100889.32], [1767713400000, 100889.32], [1767799800000, 100889.32], [1767886200000, 100889.32], [1767972600000, 100889.32], [1768059000000, 100901.81], [1768231800000, 100771.68], [1768318200000, 100866.26], [1768404600000, 100915.54], [1768491000000, 101043.87], [1768577400000, 101020.97], [1768663800000, 101050.49], [1768836600000, 100946.07], [1768923000000, 100772.88], [1768923000000, 100690.91], [1768923000000, 100690.91], [1769009400000, 100773.9], [1769095800000, 100881.33], [1769182200000, 100957.1], [1769268600000, 100983.17], [1769441400000, 101234.22], [1769527800000, 101833.64], [1769614200000, 101836.52], [1769700600000, 101918.53], [1769787000000, 101763.18], [1769787000000, 101529.37], [1769787000000, 101329.57], [1769787000000, 101329.57], [1769873400000, 101329.57], [1770046200000, 101329.57], [1770132600000, 101329.57], [1770219000000, 101329.57], [1770305400000, 101329.57], [1770391800000, 101329.57], [1770478200000, 101329.57], [1770651000000, 101329.57], [1770737400000, 101329.57], [1770823800000, 101329.57], [1770910200000, 101329.57], [1770996600000, 101329.57], [1771083000000, 101329.57], [1771255800000, 101329.57], [1771342200000, 101329.57], [1771428600000, 101329.57], [1771515000000, 101329.57], [1771601400000, 101329.57], [1771687800000, 101329.57], [1771860600000, 101329.57], [1771947000000, 101329.57], [1772033400000, 101329.57], [1772119800000, 101329.57], [1772206200000, 101329.57], [1772292600000, 101329.57], [1772465400000, 101329.57], [1772551800000, 101414.55], [1772638200000, 101343.35], [1772724600000, 101443.41], [1772811000000, 101423.88], [1772897400000, 101369.44], [1773070200000, 101346.34], [1773156600000, 101409.74], [1773243000000, 101525.83], [1773329400000, 101692.9], [1773415800000, 101876.75], [1773675000000, 101677.06], [1773761400000, 101576.82], [1773847800000, 101810.98], [1773934200000, 101472.54], [1774020600000, 101530.54], [1774279800000, 101394.12], [1774279800000, 101328.14], [1774366200000, 101351.17], [1774452600000, 101433.41], [1774539000000, 101438.16], [1774625400000, 101534.84], [1774798200000, 101457.37], [1774884600000, 101457.37], [1774971000000, 101457.37], [1775057400000, 101457.37], [1775143800000, 101457.37], [1775230200000, 101457.37], [1775489400000, 101457.37], [1775575800000, 101457.37], [1775662200000, 101457.37], [1775748600000, 101457.37], [1775835000000, 101457.37], [1776094200000, 101457.37], [1776180600000, 101457.37], [1776267000000, 101463.8], [1776353400000, 101443.79], [1776439800000, 101425.33], [1776699000000, 101452.71], [1776785400000, 101403.35], [1776871800000, 101366.32], [1776958200000, 101343.93], [1777044600000, 101381.36], [1777303800000, 101381.26], [1777390200000, 101372.65], [1777476600000, 101337.19], [1777563000000, 101392.35], [1777649400000, 101378.98], [1777908600000, 101351.39], [1777995000000, 101352.84], [1778081400000, 101409.88], [1778167800000, 101386.55], [1778254200000, 101448.35], [1778513400000, 101446.9], [1778599800000, 101400.13], [1778599800000, 101334.41], [1778686200000, 101334.41], [1778772600000, 101334.41], [1778859000000, 101334.41], [1779118200000, 101278.53], [1779204600000, 101329.69], [1779291000000, 101381.78], [1779377400000, 101316.31], [1779463800000, 101325.75], [1779723000000, 101277.27], [1779809400000, 101301.51], [1779895800000, 101310.01], [1779982200000, 101250.82], [1780068600000, 101213.32], [1780327800000, 101287.92], [1780414200000, 101288.35], [1780500600000, 101382.5], [1780587000000, 101343.82], [1780673400000, 101553.6], [1780932600000, 101540.02], [1781019000000, 101603.94], [1781105400000, 101760.36], [1781191800000, 101592.71], [1781278200000, 101559.75], [1781451000000, 101361.55], [1781537400000, 101361.55], [1781623800000, 101344.1], [1781710200000, 101303.51], [1781710200000, 101303.51], [1781796600000, 101303.51], [1781883000000, 101274.99], [1782142200000, 101366.64], [1782228600000, 101489.54], [1782315000000, 101548.24], [1782401400000, 101503.92], [1782487800000, 101414.84], [1782747000000, 101383.9], [1782833400000, 101393.84], [1782919800000, 101481.56], [1783006200000, 101259.31], [1783092600000, 101208.86], [1783351800000, 101210.6], [1783438200000, 101325.48], [1783524600000, 101342.84], [1783611000000, 101272.64], [1783697400000, 101308.06], [1783956600000, 101479.45], [1784043000000, 101335.43], [1784129400000, 101115.3], [1784129400000, 101115.3], [1784215800000, 101205.38], [1784215800000, 101125.68], [1784302200000, 101096.77], [1784561400000, 101101.43], [1784647800000, 101050.97], [1784734200000, 101012.19], [1784734200000, 101002.42], [1784820600000, 101002.42], [1784907000000, 101002.42], [1785166200000, 101002.42], [1785252600000, 101002.42], [1785339000000, 101002.42], [1785425400000, 101002.42], [1785511800000, 101002.42], [1785771000000, 101002.42], [1785857400000, 101002.42], [1785943800000, 101002.42], [1786030200000, 101002.42], [1786116600000, 101002.42], [1786375800000, 101041.28], [1786462200000, 101024.45], [1786548600000, 101057.84], [1786635000000, 101007.93], [1786721400000, 101029.17], [1786980600000, 101063.54], [1787067000000, 100991.65], [1787153400000, 101155.26], [1787239800000, 101143.44], [1787326200000, 101233.08], [1787585400000, 101193.31], [1787671800000, 101229.68], [1787758200000, 101088.88], [1787844600000, 101102.56], [1787931000000, 100737.32], [1787931000000, 100737.32], [1788017400000, 100744.74], [1788190200000, 100735.45], [1788190200000, 100735.45], [1788276600000, 100696.21], [1788363000000, 100617.0], [1788363000000, 100617.0], [1788449400000, 100617.0], [1788535800000, 100617.0], [1788622200000, 100617.0], [1788795000000, 100617.0], [1788881400000, 100617.0], [1788967800000, 100617.0], [1789054200000, 100617.0], [1789140600000, 100617.0], [1789227000000, 100617.0], [1789399800000, 100617.0], [1789486200000, 100617.0], [1789572600000, 100617.0], [1789659000000, 100597.23], [1789745400000, 100583.05], [1789831800000, 100571.91], [1790004600000, 100618.87], [1790091000000, 100648.72], [1790177400000, 100741.95]];
+  var TRS = [1761060600000, 1762356600000, 1762356600000, 1766763000000, 1767022200000, 1767540600000, 1768923000000, 1768923000000, 1769787000000, 1769787000000, 1769787000000, 1774279800000, 1774798200000, 1778599800000, 1781451000000, 1781710200000, 1784129400000, 1784215800000, 1784734200000, 1787931000000, 1788190200000, 1788363000000, 1790177400000, 1790177400000];
+  var INITIAL = 100000;
+
+  var rect = document.getElementById("replay-rect");
+  var cursor = document.getElementById("cursor");
+  var elDate = document.getElementById("ro-date");
+  var elEquity = document.getElementById("ro-equity");
+  var elNet = document.getElementById("ro-net");
+  var elTrades = document.getElementById("ro-trades");
+  var elLoop = document.getElementById("loop-count");
+  var elapsedEl = document.getElementById("ro-elapsed");
+  var playing = true;
+  var speed = 1;
+  var loop = 1;
+  var offset = 0;
+  var last = null;
+
+  function xOf(t) { return LEFT + ((t - T0) / (T1 - T0)) * PLOT_W; }
+
+  function equityAt(t) {
+    var lo = 0, hi = PTS.length - 1;
+    if (t <= PTS[0][0]) return PTS[0][1];
+    if (t >= PTS[hi][0]) return PTS[hi][1];
+    while (hi - lo > 1) {
+      var mid = (lo + hi) >> 1;
+      if (PTS[mid][0] <= t) lo = mid; else hi = mid;
+    }
+    return PTS[lo][1];
+  }
+
+  function tradesAt(t) {
+    var n = 0;
+    for (var i = 0; i < TRS.length; i++) { if (TRS[i] <= t) n++; else break; }
+    return n;
+  }
+
+  function fmtDate(t) {
+    var d = new Date(t);
+    var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return months[d.getUTCMonth()] + " " + String(d.getUTCDate()).padStart(2, "0") + ", " + d.getUTCFullYear();
+  }
+
+  function fmtDuration(ms) {
+    var days = Math.floor(ms / 86400000);
+    return days + " days";
+  }
+
+  function setClass(el, cls) { if (el) el.className = cls; }
+
+  function frame(now) {
+    if (last === null) last = now;
+    var dt = now - last;
+    last = now;
+    if (playing) offset += dt * speed;
+    if (offset >= CYCLE) {
+      offset = offset % CYCLE;
+      loop += 1;
+      if (elLoop) elLoop.textContent = String(loop);
+    }
+    var frac = offset / CYCLE;
+    var t = T0 + frac * (T1 - T0);
+    var x = xOf(t);
+    if (rect) rect.setAttribute("width", String(Math.max(0, x - LEFT)));
+    if (cursor) { cursor.setAttribute("x1", x.toFixed(1)); cursor.setAttribute("x2", x.toFixed(1)); }
+
+    var eq = equityAt(t);
+    if (elDate) elDate.textContent = fmtDate(t);
+    if (elEquity) elEquity.textContent = eq.toLocaleString("en-US", { maximumFractionDigits: 0 });
+    if (elNet) {
+      var net = (eq / INITIAL - 1) * 100;
+      elNet.textContent = (net >= 0 ? "+" : "") + net.toFixed(2) + "%";
+      setClass(elNet, net >= 0 ? "pos" : "neg");
+    }
+    if (elTrades) elTrades.textContent = String(tradesAt(t));
+    if (elapsedEl) elapsedEl.textContent = fmtDuration(t - T0);
+
+    requestAnimationFrame(frame);
+  }
+
+  var playBtn = document.getElementById("btn-play");
+  if (playBtn) {
+    playBtn.addEventListener("click", function () {
+      playing = !playing;
+      playBtn.textContent = playing ? "Pause replay" : "Resume replay";
+      playBtn.className = playing ? "btn btn-primary" : "btn btn-ghost";
+    });
+  }
+  var restartBtn = document.getElementById("btn-restart");
+  if (restartBtn) {
+    restartBtn.addEventListener("click", function () {
+      offset = 0;
+      loop += 1;
+      if (elLoop) elLoop.textContent = String(loop);
+    });
+  }
+  document.querySelectorAll("[data-speed]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      speed = parseFloat(btn.getAttribute("data-speed"));
+      document.querySelectorAll("[data-speed]").forEach(function (b) {
+        b.className = "btn " + (b === btn ? "btn-primary" : "btn-ghost");
+      });
+    });
+  });
+
+  requestAnimationFrame(frame);
+})();
+</script>
+  <script src="app.js" defer></script>
+</body>
+</html>

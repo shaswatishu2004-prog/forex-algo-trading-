@@ -41,6 +41,7 @@ NAV = """<nav class="nav" aria-label="Primary">
         <a href="index.html#tools">Tools</a>
         <a href="index.html#gates">Gates</a>
         <a href="backtest.html">Backtest</a>
+        <a href="swing.html">Swing</a>
       </div>
       <div class="nav-actions">
         <a class="btn btn-primary" href="findings.html">Findings</a>
@@ -944,6 +945,7 @@ def build_page(bars: pd.DataFrame, stats: list[dict]) -> str:
   </main>
 
   <footer>Quantitative FX Research Engine · Generated from the staged database · <a href="index.html">Dashboard</a> · <a href="{REPO_URL}" target="_blank" rel="noreferrer">View repository</a></footer>
+  <script src="app.js" defer></script>
 </body>
 </html>
 '''

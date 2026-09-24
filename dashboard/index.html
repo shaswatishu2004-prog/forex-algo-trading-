@@ -12,12 +12,13 @@
     <div class="nav-inner">
       <a class="brand" href="index.html">FX ALGO <span>RESEARCH</span></a>
       <div class="nav-links">
-        <a href="index.html#strategy">Strategy</a>
-        <a href="index.html#data">Data</a>
-        <a href="index.html#build">Build</a>
-        <a href="index.html#tools">Tools</a>
-        <a href="index.html#gates">Gates</a>
+        <a href="#strategy">Strategy</a>
+        <a href="#data">Data</a>
+        <a href="#build">Build</a>
+        <a href="#tools">Tools</a>
+        <a href="#gates">Gates</a>
         <a href="backtest.html">Backtest</a>
+        <a href="swing.html">Swing</a>
       </div>
       <div class="nav-actions">
         <a class="btn btn-primary" href="findings.html">Findings</a>
@@ -27,6 +28,7 @@
   </nav>
 
   <header class="topbar">
+    <canvas id="hero-canvas" class="hero-canvas" aria-hidden="true"></canvas>
     <div>
       <p class="eyebrow">FOREX ALGORITHMIC RESEARCH</p>
       <h1>Institutional VWAP signal engine</h1>
@@ -39,7 +41,7 @@
     <ul class="meta-strip" aria-label="Repository status">
       <li><b>17,528,036</b> bars cleaned</li>
       <li><b>26</b> years of 1m history</li>
-      <li><b>12 / 12</b> decisions resolved</li>
+      <li><b>13 / 13</b> decisions resolved</li>
       <li class="warn"><b>0</b> trades taken live</li>
     </ul>
 
@@ -49,8 +51,8 @@
 
     <section class="kpi-grid" aria-label="At a glance">
       <article class="kpi"><span>Cleaned data</span><strong>17,528,036 bars</strong><small>Six series: EURUSD, XAUUSD, and DXY on 1d and 1m</small></article>
-      <article class="kpi"><span>Open decisions</span><strong>0 open</strong><small>12 of 12 resolved, none blocked</small></article>
-      <article class="kpi"><span>Backtest status</span><strong>1 year on loop</strong><small>365 days of 1m bars replayed bar by bar on backtest.html</small></article>
+      <article class="kpi bad"><span>Minute strategy</span><strong class="bad">&minus;43.90% net</strong><small>One-year loop: 2,302 trades, 47.97% max drawdown, PF 0.70. Report on backtest.html</small></article>
+      <article class="kpi warn"><span>Swing strategy</span><strong class="warn">+0.742% net/yr</strong><small>24 trades, PF 1.51, positive skew; 3 of 5 criteria FAIL. Report on swing.html</small></article>
       <article class="kpi"><span>Live accuracy</span><strong class="warn">Not measured</strong><small>0 trades taken, no feed connected</small></article>
     </section>
 
@@ -110,14 +112,15 @@
         </article>
 
         <article class="panel">
-          <div class="panel-heading"><div><p class="eyebrow">EVIDENCE</p><h3>Research and findings</h3></div><span class="panel-tag">5 documents</span></div>
+          <div class="panel-heading"><div><p class="eyebrow">EVIDENCE</p><h3>Research and findings</h3></div><span class="panel-tag">7 links</span></div>
           <div class="link-list">
             <a class="link-card" href="findings.html"><span><b>Data findings page</b><small>Eight charts computed from the staged database: counts, gaps, VWAP bands, regime labels, offsets.</small></span><span class="arrow">&rarr;</span></a>
             <a class="link-card" href="backtest.html"><span><b>Backtest replay</b><small>One year of 1-minute bars fed to the walk-forward backtest and animated on loop, with equity, trades, and the full report.</small></span><span class="arrow">&rarr;</span></a>
+            <a class="link-card" href="swing.html"><span><b>Swing replay</b><small>The daily variant: 20-day Donchian breakouts gated by the four-state regime, walk-forward folds, and five pre-registered criteria.</small></span><span class="arrow">&rarr;</span></a>
             <a class="link-card" href="prototype.html"><span><b>Observation view</b><small>The same year charted as VWAP bands, daily regime, and the signal tape, with no entries or exits.</small></span><span class="arrow">&rarr;</span></a>
             <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/vwap-regime-research.md" target="_blank" rel="noreferrer"><span><b>vwap-regime-research.md</b><small>VWAP formulas, weighted sigma, and the four regime thresholds with sources.</small></span><span class="arrow">&rarr;</span></a>
             <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/minute-data-sources-research.md" target="_blank" rel="noreferrer"><span><b>minute-data-sources-research.md</b><small>HistData primary, OANDA backup, and five sources ruled out with reasons.</small></span><span class="arrow">&rarr;</span></a>
-            <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer"><span><b>Wayfinder map</b><small>Destination, twelve resolved decisions, and an empty frontier.</small></span><span class="arrow">&rarr;</span></a>
+            <a class="link-card" href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer"><span><b>Wayfinder map</b><small>Destination, thirteen resolved decisions, and an empty frontier.</small></span><span class="arrow">&rarr;</span></a>
           </div>
         </article>
       </div>
@@ -144,11 +147,12 @@
         </article>
 
         <article class="panel">
-          <div class="panel-heading"><div><p class="eyebrow">WAYFINDER</p><h3>Decisions resolved</h3></div><span class="panel-tag">12 / 12</span></div>
+          <div class="panel-heading"><div><p class="eyebrow">WAYFINDER</p><h3>Decisions resolved</h3></div><span class="panel-tag">13 / 13</span></div>
           <p class="sub">All settled</p>
           <ul class="decision-list">
             <li><span class="chip green">Resolved</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/signals-json-schema.md" target="_blank" rel="noreferrer">Signals JSON schema</a></b><small>One run per file under a header plus records array, two un-conjoined record types, schema_version on both.</small></div></li>
             <li><span class="chip green">Resolved</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/backtest-design.md" target="_blank" rel="noreferrer">Backtest design</a></b><small>Anchored walk-forward, locked final test, TradeCosts with financing only across 21:00, and a 1-day regime filtering 1-minute entries.</small></div></li>
+            <li><span class="chip green">Resolved</span><div><b><a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/tickets/swing-variant.md" target="_blank" rel="noreferrer">Swing variant</a></b><small>Daily 20-day Donchian breakouts in trend regimes with a ratcheted chandelier exit; five criteria pre-registered before the first run, three failed.</small></div></li>
           </ul>
           <p class="caption">The frontier is empty: every ticket in <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer">the wayfinder map</a> carries <span class="formula">status: resolved</span>.</p>
         </article>
@@ -194,18 +198,18 @@
       <div class="band-head">
         <p class="eyebrow">GO / NO-GO</p>
         <h2 class="band-title">What must be true before capital</h2>
-        <span class="band-note">Evidence completeness: one-year backtest, negative result</span>
+        <span class="band-note">One-year evidence: minute negative, swing fails 3 of 5</span>
       </div>
       <div class="grid two-col">
         <article class="panel">
           <div class="panel-heading"><div><p class="eyebrow">DECISION GATES</p><h3>Four gates</h3></div></div>
           <ul class="gate-list">
             <li><span class="gate-dot green"></span><div><b>Data integrity</b><small>All accuracy gates pass: EURUSD and XAUUSD overlap median delta 0, DXY week holes 59,995 against a 60,019 limit, weekend closures 271.</small></div></li>
-            <li><span class="gate-dot red"></span><div><b>Net profitability</b><small>Gross and net returns remain positive under stressed costs. The one-year replay fails this: gross +0.83% against 44.73% of round-trip costs over 2,302 trades, after skipping Asia and targets worth under 3x the round trip.</small></div></li>
+            <li><span class="gate-dot red"></span><div><b>Net profitability</b><small>Gross and net returns remain positive under stressed costs. The one-year minute replay fails this: gross +0.83% against 44.73% of round-trip costs over 2,302 trades, after skipping Asia and targets worth under 3x the round trip. The daily swing variant nets +0.742% a year after 1.263% of costs but fails 3 of 5 pre-registered criteria, so this gate stays red on both loops.</small></div></li>
             <li><span class="gate-dot green"></span><div><b>Risk containment</b><small>Position sizing and halts operate independently of the model.</small></div></li>
             <li><span class="gate-dot red"></span><div><b>Live equivalence</b><small>Paper fills resemble the backtest before capital is scaled.</small></div></li>
           </ul>
-          <div class="mini-meter"><div class="meter-label"><span>Evidence completeness</span><b>Backtested</b></div><div class="meter"><i style="width: 72%"></i></div><small>A full one-year report now exists on backtest.html. The result is negative, and no feed is connected.</small></div>
+          <div class="mini-meter"><div class="meter-label"><span>Evidence completeness</span><b>Backtested</b></div><div class="meter"><i style="width: 72%"></i></div><small>One-year reports exist for both loops: backtest.html is negative, swing.html nets +0.742% a year but fails 3 of 5 criteria, and no feed is connected.</small></div>
         </article>
 
         <article class="panel">
@@ -223,12 +227,12 @@
       <section class="panel full-width">
         <div class="panel-heading"><div><p class="eyebrow">RESEARCH CHECKLIST</p><h3>Evidence checklist</h3></div><span class="panel-tag">6 items</span></div>
         <div class="check-grid">
-          <label><input type="checkbox"> Chronological walk-forward split</label>
-          <label><input type="checkbox"> Bid/ask and realistic fills</label>
-          <label><input type="checkbox"> Final test period locked</label>
-          <label><input type="checkbox"> Cost stress test &ge; 2&times;</label>
-          <label><input type="checkbox"> Paper-trading evidence</label>
-          <label><input type="checkbox"> Independent kill switch</label>
+          <label><input id="check-walk-forward" type="checkbox"> Chronological walk-forward split</label>
+          <label><input id="check-realistic-fills" type="checkbox"> Bid/ask and realistic fills</label>
+          <label><input id="check-locked-test" type="checkbox"> Final test period locked</label>
+          <label><input id="check-cost-stress" type="checkbox"> Cost stress test &ge; 2&times;</label>
+          <label><input id="check-paper-trading" type="checkbox"> Paper-trading evidence</label>
+          <label><input id="check-kill-switch" type="checkbox"> Independent kill switch</label>
         </div>
         <div class="footer-note">The dashboard is intentionally conservative: a green-looking scenario is not evidence of a profitable strategy.</div>
       </section>
@@ -240,9 +244,10 @@
     <span>Public research prototype</span>
     <a href="findings.html">Data findings</a>
     <a href="backtest.html">Backtest</a>
+    <a href="swing.html">Swing</a>
     <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-/blob/main/docs/wayfinder/map.md" target="_blank" rel="noreferrer">Wayfinder map</a>
     <a href="https://github.com/shaswatishu2004-prog/forex-algo-trading-" target="_blank" rel="noreferrer">Repository</a>
   </footer>
-  <script src="app.js"></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
