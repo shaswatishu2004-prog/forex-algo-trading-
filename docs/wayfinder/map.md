@@ -43,6 +43,7 @@ Cleaned historical data, an analysis engine that marks institutional VWAP with t
 - [Data cleaning rules and canonical format](tickets/cleaning-rules.md): rules live in `src/fx_strategy/analysis/cleaning.py` and write `data/processed/` CSVs plus `manifest.json`; HistData stamps normalize through the `us_eastern_dst` sentinel after fetch-report and probe evidence, invalid bars drop by reason before dedupe, missing minutes stay missing, daily bars cut at 21:00 UTC; the DXY probe found an artifact, both fixes are in and every accuracy gate passes.
 - [Backtest design and report contents](tickets/backtest-design.md): anchored walk-forward with a locked final test per config, costs from `TradeCosts` with financing only across the 21:00 boundary, the full strategy-spec report, and a 1-day regime that filters 1-minute entries by direction (trend states gate direction, volatility states gate signal type).
 - [Signals JSON schema and folder](tickets/signals-json-schema.md): `signals/SYMBOL_YYYY-MM-DD.json` holds one run under a header plus a `records` array; two record types (`vwap_position` on 1m, `regime` on 1d) stay un-conjoined with `action: "observe"` and no strength field; `schema_version` on header and records versions breaking changes.
+- [Multi-day swing variant spec and success criteria](tickets/swing-variant.md): strict 20-day Donchian breakout gated to trend regimes only, ratcheted 3 x ATR chandelier with next-open fills, financing charged once per daily bar held, and five success criteria registered before the first run.
 
 ## Not yet specified
 

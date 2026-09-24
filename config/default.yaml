@@ -135,3 +135,16 @@ backtest:
   # rather than enforced. Set true to stop opening at the breach, which is what
   # a funded account would actually do.
   enforce_portfolio_halt: false
+
+# Multi-day swing variant (scripts/run_swing_backtest.py). Entries are strict
+# 20-day Donchian breakouts gated trend-only by swing_admits; the one-minute
+# filters block does not transfer to this engine. Financing is charged once per
+# daily bar held at costs.financing_per_session, so the flat placeholder rate
+# (2.5 bp per session, up to 50 bp on a 20-session trade) dominates the about
+# 1.3 bp round-trip trading costs: results report 0x/1x/2x sensitivity, and
+# per-symbol broker swap rates replace the placeholder before any live use.
+swing:
+  entry_channel_days: 20
+  trail_atr_multiple: 3.0
+  max_hold_sessions: 20
+  delayed_entry_delay_bars: 2
