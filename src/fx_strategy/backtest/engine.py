@@ -47,7 +47,7 @@ the new session at its open, and pays one session of financing for crossing
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -253,7 +253,7 @@ def join_regime(minute: pd.DataFrame, daily: pd.DataFrame, anchor_hour: int) -> 
     keep = ["complete_at", "regime"]
     if "atr_percentile" in labeled.columns:
         keep.append("atr_percentile")
-    right = labeled[keep].drop_duplicates("complete_at").sort_values("complete_at")
+    right = labeled.drop_duplicates(subset=["complete_at"])[keep].sort_values("complete_at")
     merged = pd.merge_asof(
         out,
         right,
@@ -367,7 +367,7 @@ def simulate(
     peak = initial_equity
     has_signal_col = "signal_kind" in combined.columns
     rejected = (
-        int((combined["signal_kind"].notna() & ~combined["signal_admitted"]).sum())
+        (combined["signal_kind"].notna() & ~combined["signal_admitted"]).sum()
         if has_signal_col
         else 0
     )
@@ -376,7 +376,7 @@ def simulate(
     # final test, so the breach is recorded by default and only stops entries
     # when backtest.enforce_portfolio_halt asks for it.
     enforce_halt = bool(cfg.get("backtest", {}).get("enforce_portfolio_halt", False))
-    diagnostics = {
+    diagnostics: dict[str, Any] = {
         "signals_seen": 0,
         "signals_rejected_by_regime": rejected,
         "signals_skipped_by_session": 0,
@@ -450,7 +450,8 @@ def simulate(
                 unrealized.pop(symbol, None)
                 open_trades.pop(symbol, None)
                 trades.append(trade)
-                points.append((trade.exit_time, initial_equity + realized + sum(unrealized.values())))
+                if trade.exit_time is not None:
+                    points.append((trade.exit_time, initial_equity + realized + sum(unrealized.values())))
             else:
                 sign = 1.0 if trade.direction == "long" else -1.0
                 unrealized[symbol] = trade.notional * sign * (row.close - trade.entry_price) / trade.entry_price
@@ -624,7 +625,7 @@ def _returns(points: list[tuple[pd.Timestamp, float]]) -> pd.Series:
     if not points:
         return pd.Series(dtype=float)
     frame = pd.DataFrame(points, columns=["ts", "equity"]).drop_duplicates("ts", keep="last")
-    daily = frame.groupby(frame["ts"].dt.floor("D"))["equity"].last()
+    daily = frame.groupby(pd.DatetimeIndex(frame["ts"]).floor("D"))["equity"].last()
     return daily.pct_change().dropna()
 
 
@@ -666,7 +667,7 @@ def _max_drawdown(points: list[tuple[pd.Timestamp, float]]) -> tuple[float, int 
     if trough_ts is not None and peak_before_trough:
         for ts, equity in points:
             if ts > trough_ts and equity >= peak_before_trough:
-                recovery_days = int((ts - trough_ts).days)
+                recovery_days = (ts - trough_ts).days
                 break
     return max_dd, recovery_days, trough_ts
 

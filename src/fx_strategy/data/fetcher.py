@@ -21,6 +21,7 @@ DEFAULT_TICKER_MAP: Dict[str, str] = {
     "EURUSD": "EURUSD=X",
     "XAUUSD": "GC=F",
     "DXY": "DX-Y.NYB",
+    "USDJPY": "USDJPY=X",
 }
 
 

@@ -4,15 +4,45 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quantitative-fx-research"
-version = "0.1.0"
-description = "Research framework for a cost-aware, regime-aware FX strategy"
+version = "2.0.0"
+description = "Cost-aware, regime-aware FX strategy with TimescaleDB data layer"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    # Data layer
+    "psycopg2-binary>=2.9",   # PostgreSQL / TimescaleDB driver
+    "pyyaml>=6.0",             # Config loading
+    "requests>=2.31",          # Polygon.io & Alpha Vantage HTTP
+    "pandas>=2.1",             # DataFrame operations
+    # API
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    # Analysis engine (existing)
+    "numpy>=1.26",
+    "scipy>=1.12",
+    "yfinance>=0.2",           # Kept for legacy / daily fallback
+]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",             # FastAPI test client
+]
+
+[tool.setuptools.package-dir]
+"" = "."
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["data_layer*", "api*"]
+
+[tool.pyright]
+pythonVersion = "3.11"
+venvPath = "."
+venv = ".venv"
+extraPaths = [".", "src"]
+reportMissingModuleSource = false
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
-

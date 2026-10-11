@@ -52,7 +52,7 @@ from fx_strategy.backtest.engine import (  # noqa: E402
 logger = logging.getLogger("run_backtest")
 
 COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
-DEFAULT_SYMBOLS = ["EURUSD", "XAUUSD", "DXY"]
+DEFAULT_SYMBOLS = ["EURUSD", "XAUUSD", "USDJPY", "DXY"]
 RESULTS_PATH = Path(__file__).resolve().parents[1] / "data" / "backtest" / "results.json"
 
 
@@ -173,8 +173,65 @@ def load_window(
     symbols: list[str],
     window_days: int,
     warmup_days: int,
+    source: str = "auto",
 ) -> tuple[dict[str, pd.DataFrame], pd.Timestamp, pd.Timestamp, dict[str, int]]:
     """Prepared frames clipped to the window, plus its bounds and bar counts."""
+    use_db = source == "db"
+    if source == "auto":
+        csv_missing = any(not (PROCESSED_DIR / f"{s}_1m.csv").exists() for s in symbols)
+        if csv_missing:
+            use_db = True
+
+    if use_db:
+        from data_layer.repository import MarketDataRepository
+        repo = MarketDataRepository()
+        prepared_raw: dict[str, pd.DataFrame] = {}
+        for symbol in symbols:
+            m_df = repo.get_ohlcv(symbol, "1m")
+            if m_df.empty:
+                logger.warning("%s: no 1m bars in database, skipping", symbol)
+                continue
+            d_df = repo.get_ohlcv(symbol, "1d")
+            minute = m_df.reset_index().rename(columns={"ts": "timestamp"})
+            daily = d_df.reset_index().rename(columns={"ts": "timestamp"}) if not d_df.empty else pd.DataFrame()
+            full = prepare_symbol(symbol, minute, daily, cfg)
+            if full.empty:
+                logger.warning("%s: prepare_symbol returned empty frame", symbol)
+                continue
+            prepared_raw[symbol] = full
+
+        if not prepared_raw:
+            raise SystemExit("No symbols returned data from MarketDataRepository")
+
+        ends = {sym: df["timestamp"].max() for sym, df in prepared_raw.items()}
+        starts = {sym: df["timestamp"].min() for sym, df in prepared_raw.items()}
+        window_end = max(ends.values())
+        earliest_start = min(starts.values())
+        target_start = window_end - pd.Timedelta(days=window_days)
+        window_start = max(target_start, earliest_start)
+
+        logger.info(
+            "DB window %s to %s (%d days requested), available from %s",
+            window_start.date(),
+            window_end.date(),
+            window_days,
+            earliest_start.date(),
+        )
+
+        prepared: dict[str, pd.DataFrame] = {}
+        counts: dict[str, int] = {}
+        for symbol, full in prepared_raw.items():
+            window = full[(full["timestamp"] >= window_start) & (full["timestamp"] <= window_end)].reset_index(drop=True)
+            if window.empty:
+                continue
+            counts[symbol] = len(window)
+            prepared[symbol] = window
+            logger.info("%s: %d 1m bars prepared in window", symbol, len(window))
+
+        if not prepared:
+            raise SystemExit("every symbol came back empty after clipping to window")
+        return prepared, window_start, window_end, counts
+
     ends: dict[str, pd.Timestamp] = {}
     for symbol in symbols:
         path = PROCESSED_DIR / f"{symbol}_1m.csv"
@@ -195,8 +252,8 @@ def load_window(
         warmup_days,
     )
 
-    prepared: dict[str, pd.DataFrame] = {}
-    counts: dict[str, int] = {}
+    prepared = {}
+    counts = {}
     for symbol in symbols:
         minute_path = PROCESSED_DIR / f"{symbol}_1m.csv"
         minute = read_minute_window(minute_path, read_start, window_end)
@@ -222,6 +279,7 @@ def run_once(
     symbols: list[str],
     window_days: int,
     warmup_days: int,
+    source: str = "auto",
 ) -> dict[str, Any]:
     """One full pass: simulate, report, stress, and assemble the result."""
     backtest_cfg = cfg.get("backtest", {})
@@ -230,7 +288,9 @@ def run_once(
     entry_delay = int(backtest_cfg.get("entry_delay_bars", 1))
     delayed_delay = int(backtest_cfg.get("delayed_entry_delay_bars", 5))
 
-    prepared, window_start, window_end, counts = load_window(cfg, symbols, window_days, warmup_days)
+    prepared, window_start, window_end, counts = load_window(
+        cfg, symbols, window_days, warmup_days, source=source
+    )
 
     started = time.perf_counter()
     trades, points, diagnostics = simulate(prepared, cfg, initial, entry_delay_bars=entry_delay)
@@ -328,6 +388,7 @@ def main() -> None:
     parser.add_argument("--config", default=None, help="Path to config file (default: config/default.yaml)")
     parser.add_argument("--symbols", default=",".join(DEFAULT_SYMBOLS), help="Comma-separated symbols")
     parser.add_argument("--window-days", type=int, default=None, help="Window length (default: config backtest.window_days)")
+    parser.add_argument("--source", choices=["auto", "db", "csv"], default="auto", help="Data source: auto (DB if available, fallback to CSV), db (MarketDataRepository), csv (data/processed)")
     parser.add_argument("--out", default=str(RESULTS_PATH), help="Results JSON path")
     parser.add_argument("--loop", action="store_true", help="Re-run the same fixed window continuously")
     parser.add_argument("--interval", type=float, default=0.0, help="Seconds to sleep between loop passes")
@@ -352,7 +413,7 @@ def main() -> None:
         iteration += 1
         if args.loop:
             logger.info("loop pass %d", iteration)
-        results = run_once(cfg, symbols, window_days, warmup_days)
+        results = run_once(cfg, symbols, window_days, warmup_days, source=args.source)
         results["loop_iteration"] = iteration
         write_results(results, out_path)
         print_summary(results)

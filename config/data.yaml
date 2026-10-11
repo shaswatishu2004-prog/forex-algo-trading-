@@ -1,0 +1,34 @@
+# Data Layer Configuration — Infoway Forex Market Data API
+# ============================================================
+# Docs: https://docs.infoway.io/en-docs/readme/forex-market-data-api
+# ============================================================
+
+database:
+  host: localhost
+  port: 5432
+  name: forex_data
+  user: forex_user
+  password: forex_pass
+  pool_min: 2
+  pool_max: 10
+
+# Symbols to ingest
+symbols:
+  XAUUSD:
+    infoway_symbol: "XAUUSD"
+    description: "Gold vs US Dollar (COMEX Gold proxy)"
+  EURUSD:
+    infoway_symbol: "EURUSD"
+    description: "Euro vs US Dollar"
+  USDJPY:
+    infoway_symbol: "USDJPY"
+    description: "US Dollar vs Japanese Yen"
+  DXY:
+    infoway_symbol: "DXY"
+    description: "US Dollar Index"
+
+ingestion:
+  primary_timeframe: "1m"
+  secondary_timeframe: "1d"
+  batch_size: 500
+  rate_limit_delay_seconds: 1.0
