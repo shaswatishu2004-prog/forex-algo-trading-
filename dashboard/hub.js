@@ -3,7 +3,7 @@
  * Pure Vanilla JS Frontend with zero data tables.
  *
  * 2 Single Tabs connected via FastAPI hyperlinks:
- *   1. Main Menu (Candlestick Verification of 2-Year Infoway Market Data from Jan 2024)
+ *   1. Main Menu (Candlestick Verification of 2-Year Repository Market Data from Jan 2024)
  *   2. Backtest Tab (Simulator with TradingView Candlestick Execution Overlays, Time & Lots)
  */
 
@@ -15,7 +15,9 @@
     activeTab: 'main', // 'main' | 'backtest'
     symbol: 'EURUSD',
     timeframe: '1d', // default to 1d to immediately present 2-year lookback
+    lookback: '2y', // '1m' | '3m' | '6m' | '1y' | '2y' | 'all'
     symbolsList: ['EURUSD', 'XAUUSD', 'USDJPY', 'DXY'],
+    mainEngine: 'db_feed', // 'db_feed' (Our Library) | 'tv_advanced' (TV Cloud)
 
     // Main Menu Chart
     mainChart: null,
@@ -27,6 +29,16 @@
     btCandleSeries: null,
     btVolumeSeries: null,
     btTrades: [],
+
+    lastBacktestParams: {
+      sym: 'EURUSD',
+      strategy: 'vwap_mean_reversion',
+      tf: '1d',
+      lookback: '1y',
+      lotSize: 0.10,
+      sl: 1.5,
+      tp: 2.0,
+    },
 
     loading: false,
   };
@@ -79,6 +91,106 @@
     return res.json();
   }
 
+  // ─── TradingView Free Charting Library Helpers ─────────────────────
+  function getTVSymbol(sym) {
+    const s = (sym || 'EURUSD').toUpperCase();
+    if (s === 'EURUSD') return 'FX:EURUSD';
+    if (s === 'USDJPY') return 'FX:USDJPY';
+    if (s === 'XAUUSD') return 'OANDA:XAUUSD';
+    if (s === 'DXY') return 'CAPITALCOM:DXY';
+    if (s.length === 6) return `FX:${s}`;
+    return s;
+  }
+
+  function renderTVAdvancedWidget(containerId, sym, tf) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = '';
+
+    const intervalMap = { '1d': 'D', '1h': '60', '15m': '15', '5m': '5', '1m': '1' };
+    const interval = intervalMap[tf] || 'D';
+
+    if (typeof TradingView !== 'undefined' && TradingView.widget) {
+      try {
+        new TradingView.widget({
+          autosize: true,
+          symbol: getTVSymbol(sym),
+          interval: interval,
+          timezone: "Etc/UTC",
+          theme: "dark",
+          style: "1",
+          locale: "en",
+          toolbar_bg: "#07090E",
+          enable_publishing: false,
+          allow_symbol_change: true,
+          container_id: containerId,
+          studies: ["STD;EMA", "STD;Bollinger_Bands", "STD;RSI"],
+          hide_side_toolbar: false,
+        });
+      } catch (e) {
+        console.error("TradingView widget error:", e);
+      }
+    } else {
+      el.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--txt2); gap:12px;">
+          <div class="pulse-dot"></div>
+          <span style="font-family:var(--mono);font-size:0.8rem;">Loading TradingView Charting Library...</span>
+        </div>`;
+      setTimeout(() => {
+        if (typeof TradingView !== 'undefined') {
+          renderTVAdvancedWidget(containerId, sym, tf);
+        }
+      }, 700);
+    }
+  }
+
+  function generatePineScript(sym, strategy, tf, lotSize, slMult, tpMult) {
+    return `//@version=5
+strategy("Quant Forex Hub - ${strategy.toUpperCase()}", overlay=true, initial_capital=10000, default_qty_type=strategy.fixed, default_qty_value=${Number(lotSize).toFixed(2)}, currency=currency.USD, commission_type=strategy.commission.percent, commission_value=0.005)
+
+// ─── Simulation Configuration (Matches Backend Engine) ───
+// Pair: ${sym} | Timeframe: ${tf} | Constant Lot Size: ${Number(lotSize).toFixed(2)} | Leverage: 1:100 (≤50% Margin Cap)
+
+sl_mult = input.float(${slMult}, "Stop Loss Sigma Multiplier", step=0.1)
+tp_mult = input.float(${tpMult}, "Take Profit Sigma Multiplier", step=0.1)
+fixed_lots = input.float(${Number(lotSize).toFixed(2)}, "Constant Lot Size (Identical Across All Trades)", step=0.01)
+
+// ─── Rolling Indicators ───
+len = input.int(30, "Rolling Window")
+typ = hlc3
+vol = volume > 0 ? volume : 1.0
+vwap_val = ta.vwma(typ, len)
+sigma = ta.stdev(close, len)
+upper_band = vwap_val + (1.5 * sigma)
+lower_band = vwap_val - (1.5 * sigma)
+
+plot(vwap_val, "VWAP Line", color=color.new(#3B82F6, 0), linewidth=2)
+plot(upper_band, "+1.5σ Upper Band", color=color.new(#EF4444, 20), linewidth=1)
+plot(lower_band, "-1.5σ Lower Band", color=color.new(#10B981, 20), linewidth=1)
+
+// ─── Order Execution with Exact Targets ───
+long_cond = ta.crossunder(close, lower_band)
+short_cond = ta.crossover(close, upper_band)
+
+var float long_sl = na
+var float long_tp = na
+var float short_sl = na
+var float short_tp = na
+
+if (long_cond and strategy.position_size == 0)
+    long_sl := close - (sl_mult * sigma)
+    long_tp := close + (tp_mult * sigma)
+    strategy.entry("BUY " + str.tostring(fixed_lots) + "L", strategy.long, qty=fixed_lots)
+    strategy.exit("TP/SL Long", "BUY " + str.tostring(fixed_lots) + "L", limit=long_tp, stop=long_sl)
+
+if (short_cond and strategy.position_size == 0)
+    short_sl := close + (sl_mult * sigma)
+    short_tp := close - (tp_mult * sigma)
+    strategy.entry("SELL " + str.tostring(fixed_lots) + "L", strategy.short, qty=fixed_lots)
+    strategy.exit("TP/SL Short", "SELL " + str.tostring(fixed_lots) + "L", limit=short_tp, stop=short_sl)
+`;
+  }
+
   // ─── Root DOM Mounting ──────────────────────────────────────────────
   const root = document.getElementById('root');
   if (!root) {
@@ -95,7 +207,7 @@
             <div class="brand-logo-badge">⚡</div>
             <div class="brand-text">
               <span class="brand-title">QUANT FOREX HUB</span>
-              <span class="brand-subtitle">Infoway 2-Year Engine · Jan 2024 to Present</span>
+              <span class="brand-subtitle">Quant Research Engine · Dukascopy 1M Parquet & Backtest Feed</span>
             </div>
           </div>
 
@@ -114,9 +226,12 @@
           <div class="header-actions">
             <div class="api-status-pill">
               <span class="pulse-dot"></span>
-              <span id="api-status-text">Infoway 2-Year Feed · Active</span>
+              <span id="api-status-text">Repository Data Feed · Active</span>
             </div>
-            <button class="pill-btn" id="btn-sync-feed" title="Sync latest Infoway bars">
+            <button class="pill-btn" id="btn-open-ingestion-log" title="View Ingestion Log">
+              📋 Ingestion Log
+            </button>
+            <button class="pill-btn" id="btn-sync-feed" title="Sync latest market feed bars">
               🔄 Sync Live Feed
             </button>
           </div>
@@ -129,7 +244,7 @@
             <div class="section-headline-bar">
               <div class="headline-text-group">
                 <h1 class="headline-title">🕯️ Candlestick Verification (2-Year History from Jan 2024)</h1>
-                <p class="headline-desc">Real-time OHLCV verification rendered from Infoway API. Zero tabular data representation.</p>
+                <p class="headline-desc">Real-time OHLCV verification rendered from repository market data. Zero tabular data representation.</p>
               </div>
             </div>
 
@@ -146,13 +261,39 @@
 
                 <div class="selector-group" id="timeframe-selector-group">
                   <span class="selector-label">Timeframe:</span>
-                  <button class="pill-btn active" data-tf="1d">1d (2-Year History)</button>
+                  <button class="pill-btn active" data-tf="1d">1d</button>
+                  <button class="pill-btn" data-tf="4h">4h</button>
                   <button class="pill-btn" data-tf="1h">1h</button>
                   <button class="pill-btn" data-tf="15m">15m</button>
                   <button class="pill-btn" data-tf="5m">5m</button>
                   <button class="pill-btn" data-tf="1m">1m</button>
                 </div>
+
+                <div class="selector-group" id="lookback-selector-group">
+                  <span class="selector-label">Lookback:</span>
+                  <button class="pill-btn" data-lb="1m">1M</button>
+                  <button class="pill-btn" data-lb="3m">3M</button>
+                  <button class="pill-btn" data-lb="6m">6M</button>
+                  <button class="pill-btn" data-lb="1y">1Y</button>
+                  <button class="pill-btn active" data-lb="2y">2Y (Jan 2024)</button>
+                  <button class="pill-btn" data-lb="all">ALL</button>
+                </div>
+
+                <div class="selector-group" id="engine-selector-group">
+                  <span class="selector-label">Engine:</span>
+                  <button class="pill-btn active" data-engine="db_feed">Our Library (Dukascopy & HistData)</button>
+                  <button class="pill-btn" data-engine="tv_advanced">TradingView Cloud (Reference)</button>
+                </div>
+
+                <button class="pill-btn" id="btn-sync-dukascopy" title="Self-Updating 1-Minute Historical Data Sync from Dukascopy (with HistData backup)">
+                  🔄 Sync Engine (Dukascopy)
+                </button>
+                <button class="pill-btn" id="btn-open-ingestion-log" title="View Ingestion Audit Log">
+                  📋 Audit Log
+                </button>
               </div>
+
+
 
               <!-- HUD Metrics Card Grid -->
               <div class="chart-hud-grid">
@@ -169,12 +310,12 @@
                 <div class="hud-item">
                   <span class="hud-label">Total Volume</span>
                   <span class="hud-value gold" id="hud-volume">—</span>
-                  <span class="hud-sub">Infoway Cumulative Tick Volume</span>
+                  <span class="hud-sub">Cumulative Tick Volume</span>
                 </div>
                 <div class="hud-item">
                   <span class="hud-label">Verified Historical Bars</span>
                   <span class="hud-value green" id="hud-bar-count">—</span>
-                  <span class="hud-sub" id="hud-source-badge">Infoway API • Starting Jan 2024</span>
+                  <span class="hud-sub" id="hud-source-badge">Verified DB Feed • Starting Jan 2024</span>
                 </div>
               </div>
 
@@ -182,9 +323,10 @@
               <div class="candlestick-canvas-box" style="height: 540px;">
                 <div class="chart-verification-badge">
                   <span>●</span>
-                  <span id="badge-chart-info">EURUSD · 1d · LIVE</span>
+                  <span id="badge-chart-info">EURUSD · 1d · Our Library</span>
                 </div>
-                <div id="main-chart-container" style="width: 100%; height: 100%;"></div>
+                <div id="main-chart-container" style="width: 100%; height: 100%; display: block;"></div>
+                <div id="tv-advanced-main-container" style="width: 100%; height: 100%; display: none;"></div>
               </div>
             </div>
           </section>
@@ -194,7 +336,7 @@
             <div class="section-headline-bar">
               <div class="headline-text-group">
                 <h1 class="headline-title">🚀 Backtest Simulator & Trade Execution Chart</h1>
-                <p class="headline-desc">Run strategy simulations over verified Infoway bars with trade marker overlays plotted directly on the candlesticks.</p>
+                <p class="headline-desc">Run strategy simulations over verified repository bars with trade marker overlays plotted directly on the candlesticks.</p>
               </div>
             </div>
 
@@ -224,8 +366,24 @@
                 <div class="form-group">
                   <label class="form-label" for="bt-timeframe">Bar Timeframe</label>
                   <select id="bt-timeframe" class="form-select">
-                    <option value="1d" selected>1d (2-Year Lookback from Jan 2024)</option>
-                    <option value="1m">1m Intraday</option>
+                    <option value="1d" selected>1d (Daily Bars)</option>
+                    <option value="4h">4h (4-Hour Bars)</option>
+                    <option value="1h">1h (1-Hour Bars)</option>
+                    <option value="15m">15m (15-Minute Bars)</option>
+                    <option value="5m">5m (5-Minute Bars)</option>
+                    <option value="1m">1m (1-Minute High-Res)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="bt-lookback">Lookback Window</label>
+                  <select id="bt-lookback" class="form-select">
+                    <option value="2y" selected>2 Years (Jan 2024 to Present)</option>
+                    <option value="1y">1 Year (365 Days)</option>
+                    <option value="6m">6 Months (180 Days)</option>
+                    <option value="3m">3 Months (90 Days)</option>
+                    <option value="1m">1 Month (30 Days)</option>
+                    <option value="all">Full Database History (MAX)</option>
                   </select>
                 </div>
 
@@ -268,20 +426,39 @@
                   </span>
                 </div>
 
-                <!-- Lot Sizing Mode: Dynamic vs Custom -->
+                <!-- Constant Position Sizing Across All Trades -->
                 <div class="form-group">
-                  <label class="form-label" for="bt-lot-mode">Lot Sizing Mode</label>
-                  <select id="bt-lot-mode" class="form-select">
-                    <option value="dynamic" selected>Dynamic (Auto-sized from Risk & 50% Margin Cap)</option>
-                    <option value="custom">Custom Choose Lot Size</option>
-                  </select>
+                  <label class="form-label" for="bt-lot-size">Position Size (Lots — Same for All Trades)</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="number" id="bt-lot-size" class="form-input" value="0.10" step="0.01" min="0.01" max="50.0" style="width: 100%;"/>
+                    <span style="font-size: 0.70rem; color: var(--emerald); font-weight: 700; white-space: nowrap; font-family: var(--mono); background: rgba(16,185,129,0.12); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(16,185,129,0.25);">CONSTANT</span>
+                  </div>
+                  <span style="font-size: 0.68rem; color: var(--txt3); margin-top: 3px; display: block;">
+                    Fixed sizing: Every single trade executes with this exact lot size throughout the backtest.
+                  </span>
                 </div>
 
-                <div class="form-group" id="bt-custom-lot-group" style="display: none;">
-                  <label class="form-label" for="bt-custom-lot">Custom Lot Size (Lots)</label>
-                  <input type="number" id="bt-custom-lot" class="form-input" value="0.10" step="0.01" min="0.01" max="50.0"/>
-                  <span style="font-size: 0.68rem; color: var(--amber); margin-top: 3px; display: block;">
-                    Clamped automatically if required margin exceeds the 50% account cap.
+                <!-- Custom Commission Per Lot -->
+                <div class="form-group">
+                  <label class="form-label" for="bt-commission">Custom Commission ($ / Lot)</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="number" id="bt-commission" class="form-input" value="0.00" step="0.50" min="0" max="50.0" style="width: 100%;"/>
+                    <span style="font-size: 0.70rem; color: var(--blue); font-weight: 700; white-space: nowrap; font-family: var(--mono); background: rgba(59,130,246,0.12); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(59,130,246,0.25);">$/LOT</span>
+                  </div>
+                  <span style="font-size: 0.68rem; color: var(--txt3); margin-top: 3px; display: block;">
+                    Round-turn commission fee deducted per lot (e.g. $3.50 or $7.00/lot).
+                  </span>
+                </div>
+
+                <!-- Custom Slippage -->
+                <div class="form-group">
+                  <label class="form-label" for="bt-slippage">Custom Slippage (Pips / Trade)</label>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="number" id="bt-slippage" class="form-input" value="0.0" step="0.1" min="0" max="20.0" style="width: 100%;"/>
+                    <span style="font-size: 0.70rem; color: var(--amber); font-weight: 700; white-space: nowrap; font-family: var(--mono); background: rgba(245,158,11,0.12); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(245,158,11,0.25);">PIPS</span>
+                  </div>
+                  <span style="font-size: 0.68rem; color: var(--txt3); margin-top: 3px; display: block;">
+                    Execution penalty subtracted from trade entry/exit fill prices.
                   </span>
                 </div>
 
@@ -299,11 +476,16 @@
                       <span style="font-size: 0.95rem; font-weight: 700;">🕯️ Execution Candlestick Chart (Trade Markers Plotted)</span>
                       <span class="regime-badge badge-bullish" id="bt-chart-status">Ready</span>
                     </div>
-                    <div class="selector-group">
-                      <span class="selector-label">Markers:</span>
-                      <span style="font-size: 0.73rem; color: var(--txt2); font-family: var(--mono);">
-                        🟢 BUY Marker &nbsp;|&nbsp; 🔴 SELL Marker &nbsp;|&nbsp; ⚪ Outcome
-                      </span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <div class="selector-group">
+                        <span class="selector-label">Markers:</span>
+                        <span style="font-size: 0.73rem; color: var(--txt2); font-family: var(--mono);">
+                          🟢 BUY Marker &nbsp;|&nbsp; 🔴 SELL Marker &nbsp;|&nbsp; ⚪ Outcome
+                        </span>
+                      </div>
+                      <button class="pill-btn" id="btn-export-pinescript" title="Generate TradingView Pine Script v5 Strategy">
+                        ⚡ Export to Pine Script v5
+                      </button>
                     </div>
                   </div>
 
@@ -335,6 +517,22 @@
                     <span class="kpi-card-val" id="kpi-pf">0.00</span>
                   </div>
                   <div class="kpi-card">
+                    <span class="kpi-card-label">Avg Win</span>
+                    <span class="kpi-card-val green" id="kpi-avg-win">+$0.00</span>
+                  </div>
+                  <div class="kpi-card">
+                    <span class="kpi-card-label">Avg Loss</span>
+                    <span class="kpi-card-val red" id="kpi-avg-loss">-$0.00</span>
+                  </div>
+                  <div class="kpi-card">
+                    <span class="kpi-card-label">Win/Loss Ratio</span>
+                    <span class="kpi-card-val cyan" id="kpi-wl-ratio">0.00x</span>
+                  </div>
+                  <div class="kpi-card">
+                    <span class="kpi-card-label">Total Commission</span>
+                    <span class="kpi-card-val amber" id="kpi-total-comm">-$0.00</span>
+                  </div>
+                  <div class="kpi-card">
                     <span class="kpi-card-label">Max Drawdown</span>
                     <span class="kpi-card-val red" id="kpi-max-dd">0.00%</span>
                   </div>
@@ -347,8 +545,8 @@
                     <span class="kpi-card-val cyan" id="kpi-leverage-cap">1:100 (≤50%)</span>
                   </div>
                   <div class="kpi-card">
-                    <span class="kpi-card-label">Peak Margin Used</span>
-                    <span class="kpi-card-val gold" id="kpi-peak-margin">0.0%</span>
+                    <span class="kpi-card-label">Position Sizing</span>
+                    <span class="kpi-card-val gold" id="kpi-pos-size">0.10L (Constant)</span>
                   </div>
                 </div>
 
@@ -360,12 +558,30 @@
                   </div>
                 </div>
 
-                <!-- Executed Trades Log (Visual Cards with Time & Lot Size, Zero Tables) -->
+                <!-- Executed Trades Log & Commission Distribution -->
                 <div class="trade-log-container">
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3 style="font-size: 0.95rem; font-weight: 700;">📑 Executed Trade Log (Time & Lot Size)</h3>
+                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                      <h3 style="font-size: 0.95rem; font-weight: 700;">📑 Executed Trade Log & Commission Distribution</h3>
+                      <p style="font-size: 0.72rem; color: var(--txt3); margin-top: 2px;">Distribution of trade returns and margin usage in accordance to commission.</p>
+                    </div>
                     <span style="font-size: 0.72rem; color: var(--txt2); font-family: var(--mono);" id="trade-log-counter">0 trades</span>
                   </div>
+
+                  <!-- Commission vs P&L Distribution Banner -->
+                  <div id="comm-dist-banner" style="display:none; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 14px 18px; margin: 12px 0;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; font-size: 0.78rem; font-family: var(--mono);">
+                      <div><span>Gross P&L: </span><strong id="dist-gross-pnl" style="color:var(--txt);">$0.00</strong></div>
+                      <div><span>Total Commission: </span><strong id="dist-total-comm" style="color:var(--amber);">-$0.00</strong></div>
+                      <div><span>Net P&L: </span><strong id="dist-net-pnl" style="color:var(--emerald);">$0.00</strong></div>
+                      <div><span>Commission Drag: </span><strong id="dist-fee-drag" style="color:var(--txt2);">0.0%</strong></div>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; display: flex; margin-top: 10px;" id="dist-bar-track">
+                      <div id="dist-bar-net" style="height: 100%; background: #10B981; width: 100%;" title="Net Gain"></div>
+                      <div id="dist-bar-comm" style="height: 100%; background: #F59E0B; width: 0%;" title="Commission Drag"></div>
+                    </div>
+                  </div>
+
                   <div class="trade-cards-list" id="trade-cards-list">
                     <div style="padding: 24px; text-align: center; color: var(--txt3);">
                       Click "Run Simulation" above to execute backtest and view trades with timestamp & lot sizes.
@@ -376,6 +592,69 @@
             </div>
           </section>
         </main>
+
+        <!-- Ingestion Audit Log Modal -->
+        <div class="hub-modal-overlay" id="modal-ingestion-log">
+          <div class="hub-modal-card">
+            <div class="hub-modal-header">
+              <div class="hub-modal-title">
+                <span>📋</span> Ingestion Request Audit Log
+              </div>
+              <button class="hub-modal-close-btn" id="btn-close-log-modal">&times;</button>
+            </div>
+            <div class="hub-modal-body">
+              <!-- Quick Fetch Form -->
+              <div style="background: var(--elevated); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-weight: 700; font-size: 0.8rem; color: var(--txt);">Trigger HistData Fetch:</span>
+                  <select id="fetch-pair" class="form-select" style="padding: 4px 8px; font-size: 0.78rem;">
+                    <option value="EURUSD">EURUSD</option>
+                    <option value="USDJPY">USDJPY</option>
+                    <option value="XAUUSD">XAUUSD</option>
+                    <option value="DXY">DXY</option>
+                  </select>
+                  <input type="number" id="fetch-year" class="form-input" value="2024" min="2010" max="2025" style="width: 75px; padding: 4px 8px; font-size: 0.78rem;" />
+                  <input type="number" id="fetch-month" class="form-input" placeholder="Full Year" min="1" max="12" style="width: 90px; padding: 4px 8px; font-size: 0.78rem;" title="Leave empty for whole year" />
+                </div>
+                <button class="btn-primary" id="btn-submit-fetch" style="padding: 6px 14px; font-size: 0.78rem;">
+                  <span>📥 Start Ingestion</span>
+                </button>
+              </div>
+
+              <!-- Ingestion Logs List -->
+              <div style="display:flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.78rem; font-weight: 700; color: var(--txt2); text-transform: uppercase;">Recent Fetch Audit Entries</span>
+                <button class="pill-btn" id="btn-refresh-log" style="font-size: 0.72rem; padding: 3px 8px;">🔄 Refresh Log</button>
+              </div>
+              <div id="ingestion-log-list" style="display:flex; flex-direction:column; gap:8px; max-height: 420px; overflow-y: auto;">
+                <div style="text-align:center; padding: 20px; color:var(--txt3);">Loading audit logs...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pine Script v5 Strategy Modal -->
+        <div class="hub-modal-overlay" id="modal-pinescript">
+          <div class="hub-modal-card">
+            <div class="hub-modal-header">
+              <div class="hub-modal-title">
+                <span>⚡</span> TradingView Pine Script v5 Strategy Exporter
+              </div>
+              <button class="hub-modal-close-btn" id="btn-close-pine-modal">&times;</button>
+            </div>
+            <div class="hub-modal-body">
+              <div style="font-size: 0.8rem; color: var(--txt2); line-height: 1.5;">
+                Paste this strategy directly into the <strong style="color:var(--txt);">TradingView Pine Editor</strong> on TradingView.com to verify your strategy execution, constant lot sizing, and TP/SL targets with zero discrepancy.
+              </div>
+              <pre class="hub-code-block" id="pinescript-textarea"></pre>
+              <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn-primary" id="btn-copy-pinescript">
+                  <span>📋 Copy Pine Script</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     `;
 
@@ -447,17 +726,8 @@
     // Resize and load active charts
     setTimeout(() => {
       if (tabName === 'main') {
-        ensureChartsReady(() => {
-          if (!state.mainChart) {
-            initMainChart();
-          } else {
-            const c = document.getElementById('main-chart-container');
-            if (c) {
-              state.mainChart.applyOptions({ width: c.clientWidth, height: c.clientHeight });
-              state.mainChart.timeScale().fitContent();
-            }
-          }
-        });
+        updateMainChartEngine();
+        loadMainCandleData();
       } else if (tabName === 'backtest') {
         ensureChartsReady(() => {
           if (!state.btChart) {
@@ -475,10 +745,201 @@
     }, 60);
   }
 
+  // ─── Main Menu Candlestick Engine Switcher ──────────────────────────
+  function updateMainChartEngine() {
+    const tvBox = document.getElementById('tv-advanced-main-container');
+    const dbBox = document.getElementById('main-chart-container');
+    const badge = document.getElementById('badge-chart-info');
+    if (!tvBox || !dbBox) return;
+
+    if (state.mainEngine === 'tv_advanced') {
+      tvBox.style.display = 'block';
+      dbBox.style.display = 'none';
+      if (badge) badge.textContent = `${state.symbol} · ${state.timeframe} · TradingView Cloud`;
+      renderTVAdvancedWidget('tv-advanced-main-container', state.symbol, state.timeframe);
+    } else {
+      tvBox.style.display = 'none';
+      dbBox.style.display = 'block';
+      if (badge) badge.textContent = `${state.symbol} · ${state.timeframe} · Our Library (Dukascopy Parquet)`;
+      ensureChartsReady(() => {
+        if (!state.mainChart) {
+          initMainChart();
+        } else {
+          state.mainChart.applyOptions({ width: dbBox.clientWidth, height: dbBox.clientHeight });
+          state.mainChart.timeScale().fitContent();
+          loadMainCandleData();
+        }
+      });
+    }
+  }
+
+  function switchToOurLibraryWithData(symbol, timeframe) {
+    state.mainEngine = 'db_feed';
+    if (symbol) state.symbol = symbol;
+    if (timeframe) state.timeframe = timeframe;
+
+    // Update Engine buttons in DOM
+    const engGroup = document.getElementById('engine-selector-group');
+    if (engGroup) {
+      engGroup.querySelectorAll('button').forEach(b => {
+        if (b.getAttribute('data-engine') === 'db_feed') b.classList.add('active');
+        else b.classList.remove('active');
+      });
+    }
+
+    // Update Symbol buttons in DOM
+    const symGroup = document.getElementById('symbol-selector-group');
+    if (symGroup && symbol) {
+      symGroup.querySelectorAll('button').forEach(b => {
+        if (b.getAttribute('data-symbol') === symbol) b.classList.add('active');
+        else b.classList.remove('active');
+      });
+    }
+
+    // Update Timeframe buttons in DOM
+    const tfGroup = document.getElementById('timeframe-selector-group');
+    if (tfGroup && timeframe) {
+      tfGroup.querySelectorAll('button').forEach(b => {
+        if (b.getAttribute('data-tf') === timeframe) b.classList.add('active');
+        else b.classList.remove('active');
+      });
+    }
+
+    renderLookbackButtons(state.timeframe);
+
+    // Ensure we are on Main tab
+    if (state.activeTab !== 'main') {
+      switchTab('main');
+    } else {
+      updateMainChartEngine();
+      loadMainCandleData();
+    }
+
+    showToast(`Showing Dukascopy Parquet for ${state.symbol} (${state.timeframe}) in Our Library chart.`);
+  }
+
+  window.viewInOurLibrary = function(symbol, timeframe) {
+    closeIngestionModal();
+    switchToOurLibraryWithData(symbol, timeframe || '1m');
+  };
+
+  // ─── Timeframe & Lookback Window Alignment ───────────────────────────
+  const TIMEFRAME_LOOKBACK_CONFIG = {
+    '1m': {
+      default: '1m',
+      options: [
+        { id: '1d', label: '1D (24h)' },
+        { id: '3d', label: '3D' },
+        { id: '1w', label: '1W' },
+        { id: '2w', label: '2W' },
+        { id: '1m', label: '1M (30 Days)' },
+        { id: '3m', label: '3M (90 Days)' },
+        { id: '6m', label: '6M (180 Days)' },
+        { id: '1y', label: '1Y (365 Days)' },
+        { id: '2y', label: '2Y (Jan 2024)' },
+        { id: 'all', label: 'ALL M1' },
+      ],
+      fetchLimit: (lb) => (lb === '1d' ? 2000 : lb === '3d' ? 5000 : lb === '1w' ? 12000 : lb === '2w' ? 25000 : lb === '1m' ? 45000 : 80000),
+    },
+
+    '5m': {
+      default: '1w',
+      options: [
+        { id: '1d', label: '1D' },
+        { id: '3d', label: '3D' },
+        { id: '1w', label: '1W' },
+        { id: '1m', label: '1M (30 Days)' },
+        { id: 'all', label: 'ALL' },
+      ],
+      fetchLimit: () => 6000,
+    },
+    '15m': {
+      default: '1m',
+      options: [
+        { id: '1w', label: '1W' },
+        { id: '2w', label: '2W' },
+        { id: '1m', label: '1M' },
+        { id: '3m', label: '3M (90 Days)' },
+        { id: 'all', label: 'ALL' },
+      ],
+      fetchLimit: () => 6000,
+    },
+    '1h': {
+      default: '3m',
+      options: [
+        { id: '1m', label: '1M' },
+        { id: '3m', label: '3M' },
+        { id: '6m', label: '6M' },
+        { id: '1y', label: '1Y' },
+        { id: 'all', label: 'ALL' },
+      ],
+      fetchLimit: () => 6000,
+    },
+    '4h': {
+      default: '1y',
+      options: [
+        { id: '3m', label: '3M' },
+        { id: '6m', label: '6M' },
+        { id: '1y', label: '1Y' },
+        { id: '2y', label: '2Y' },
+        { id: 'all', label: 'ALL' },
+      ],
+      fetchLimit: () => 6000,
+    },
+    '1d': {
+      default: '2y',
+      options: [
+        { id: '3m', label: '3M' },
+        { id: '6m', label: '6M' },
+        { id: '1y', label: '1Y' },
+        { id: '2y', label: '2Y (Jan 2024)' },
+        { id: 'all', label: 'ALL' },
+      ],
+      fetchLimit: () => 5000,
+    },
+  };
+
+  function renderLookbackButtons(tf) {
+    const lbGroup = document.getElementById('lookback-selector-group');
+    if (!lbGroup) return;
+
+    const cfg = TIMEFRAME_LOOKBACK_CONFIG[tf] || TIMEFRAME_LOOKBACK_CONFIG['1d'];
+    const validIds = cfg.options.map(o => o.id);
+    if (!validIds.includes(state.lookback)) {
+      state.lookback = cfg.default;
+    }
+
+    lbGroup.innerHTML = `
+      <span class="selector-label">Lookback:</span>
+      ${cfg.options.map(o => `
+        <button class="pill-btn ${o.id === state.lookback ? 'active' : ''}" data-lb="${o.id}">
+          ${o.label}
+        </button>
+      `).join('')}
+    `;
+  }
+
+  function updateBacktestLookbackOptions(tf) {
+    const sel = document.getElementById('bt-lookback');
+    if (!sel) return;
+    const cfg = TIMEFRAME_LOOKBACK_CONFIG[tf] || TIMEFRAME_LOOKBACK_CONFIG['1d'];
+    const currentVal = sel.value;
+    const validIds = cfg.options.map(o => o.id);
+    const newVal = validIds.includes(currentVal) ? currentVal : cfg.default;
+
+    sel.innerHTML = cfg.options.map(o => `
+      <option value="${o.id}" ${o.id === newVal ? 'selected' : ''}>
+        ${o.label}
+      </option>
+    `).join('');
+  }
+
   // ─── Main Menu Candlestick Chart ────────────────────────────────────
   function initMainChart() {
     const container = document.getElementById('main-chart-container');
     if (!container) return;
+
+    renderLookbackButtons(state.timeframe);
 
     if (state.mainChart) {
       state.mainChart.remove();
@@ -547,7 +1008,10 @@
     if (badge) badge.textContent = `${state.symbol} · ${state.timeframe} · Fetching...`;
 
     try {
-      const url = `/api/ohlcv?symbol=${encodeURIComponent(state.symbol)}&timeframe=${encodeURIComponent(state.timeframe)}&limit=5000`;
+      const cfg = TIMEFRAME_LOOKBACK_CONFIG[state.timeframe] || TIMEFRAME_LOOKBACK_CONFIG['1d'];
+      const lb = state.lookback || cfg.default;
+      const fetchLimit = cfg.fetchLimit ? cfg.fetchLimit(lb) : 5000;
+      const url = `/api/ohlcv?symbol=${encodeURIComponent(state.symbol)}&timeframe=${encodeURIComponent(state.timeframe)}&lookback=${encodeURIComponent(lb)}&limit=${fetchLimit}`;
       const res = await apiFetch(url);
       const rawBars = res.bars || [];
 
@@ -615,7 +1079,14 @@
         document.getElementById('hud-bar-count').textContent = '0 Bars';
       }
 
-      if (badge) badge.textContent = `${state.symbol} · ${state.timeframe} · Verified 2-Year Feed`;
+      if (badge) {
+        const engineLabel = state.mainEngine === 'db_feed' ? 'Our Library (Dukascopy Parquet)' : 'TradingView Cloud';
+        badge.textContent = `${state.symbol} · ${state.timeframe} · Lookback: ${lb.toUpperCase()} · ${engineLabel}`;
+      }
+      const sourceBadge = document.getElementById('hud-source-badge');
+      if (sourceBadge) {
+        sourceBadge.textContent = state.timeframe === '1m' ? 'Dukascopy 1M Parquet Engine • Our Library' : `Verified Dukascopy Feed • Lookback ${lb.toUpperCase()}`;
+      }
     } catch (err) {
       console.error('Candle load error:', err);
       if (badge) badge.textContent = `${state.symbol} · Load Error`;
@@ -624,6 +1095,8 @@
   }
 
   function setupMainChartControls() {
+    renderLookbackButtons(state.timeframe);
+
     const symGroup = document.getElementById('symbol-selector-group');
     if (symGroup) {
       symGroup.addEventListener('click', (e) => {
@@ -632,6 +1105,9 @@
         symGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         state.symbol = btn.getAttribute('data-symbol');
+        if (state.mainEngine === 'tv_advanced') {
+          renderTVAdvancedWidget('tv-advanced-main-container', state.symbol, state.timeframe);
+        }
         loadMainCandleData();
       });
     }
@@ -644,10 +1120,72 @@
         tfGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         state.timeframe = btn.getAttribute('data-tf');
+        renderLookbackButtons(state.timeframe);
+        if (state.timeframe === '1m' && state.mainEngine !== 'db_feed') {
+          // HistData is 1m historical data: always display in Our Library
+          switchToOurLibraryWithData(state.symbol, '1m');
+          return;
+        }
+        if (state.mainEngine === 'tv_advanced') {
+          renderTVAdvancedWidget('tv-advanced-main-container', state.symbol, state.timeframe);
+        }
         loadMainCandleData();
       });
     }
+
+    const lbGroup = document.getElementById('lookback-selector-group');
+    if (lbGroup) {
+      lbGroup.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-lb]');
+        if (!btn) return;
+        lbGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.lookback = btn.getAttribute('data-lb');
+        loadMainCandleData();
+      });
+    }
+
+    const engGroup = document.getElementById('engine-selector-group');
+    if (engGroup) {
+      engGroup.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-engine]');
+        if (!btn) return;
+        engGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.mainEngine = btn.getAttribute('data-engine');
+        updateMainChartEngine();
+      });
+    }
+
+    const syncBtn = document.getElementById('btn-sync-dukascopy');
+    if (syncBtn) {
+      syncBtn.addEventListener('click', async () => {
+        syncBtn.disabled = true;
+        const originalText = syncBtn.textContent;
+        syncBtn.textContent = '🔄 Syncing Dukascopy...';
+        showToast(`Initiating self-updating sync for ${state.symbol} via Dukascopy (HistData backup)...`);
+        try {
+          const res = await apiFetch(`/api/market-data/sync?symbols=${encodeURIComponent(state.symbol)}`, { method: 'POST' });
+          const count = res.total_bars_inserted || 0;
+          showToast(`✅ Synced ${state.symbol}: +${count.toLocaleString()} 1m bars added!`);
+          loadMainCandleData();
+        } catch (e) {
+          showToast(`❌ Sync error: ${e.message}`);
+        } finally {
+          syncBtn.disabled = false;
+          syncBtn.textContent = originalText;
+        }
+      });
+    }
+
+    const openLogBtn = document.getElementById('btn-open-ingestion-log');
+    if (openLogBtn) {
+      openLogBtn.addEventListener('click', () => {
+        openIngestionModal();
+      });
+    }
   }
+
 
   // ─── Backtest Candlestick Chart (Trade Markers Overlay) ─────────────
   function initBacktestChart() {
@@ -720,11 +1258,14 @@
   async function loadBacktestCandlesAndTrades() {
     const sym = document.getElementById('bt-symbol')?.value || 'EURUSD';
     const tf = document.getElementById('bt-timeframe')?.value || '1d';
+    const lb = document.getElementById('bt-lookback')?.value || '2y';
     const badge = document.getElementById('badge-bt-chart-info');
-    if (badge) badge.textContent = `${sym} · ${tf} · Execution Markers Plotted`;
+    if (badge) badge.textContent = `${sym} · ${tf} (Lookback: ${lb.toUpperCase()}) · Execution Markers Plotted`;
 
     try {
-      const url = `/api/ohlcv?symbol=${encodeURIComponent(sym)}&timeframe=${encodeURIComponent(tf)}&limit=5000`;
+      const cfg = TIMEFRAME_LOOKBACK_CONFIG[tf] || TIMEFRAME_LOOKBACK_CONFIG['1d'];
+      const fetchLimit = cfg.fetchLimit ? cfg.fetchLimit(lb) : 5000;
+      const url = `/api/ohlcv?symbol=${encodeURIComponent(sym)}&timeframe=${encodeURIComponent(tf)}&lookback=${encodeURIComponent(lb)}&limit=${fetchLimit}`;
       const res = await apiFetch(url);
       const rawBars = res.bars || [];
 
@@ -842,25 +1383,25 @@
     const runBtn = document.getElementById('btn-run-backtest');
     if (!runBtn) return;
 
-    // Symbol or timeframe change on backtest form reloads chart
+    // Symbol, timeframe, or lookback change on backtest form reloads chart
     const btSymSelect = document.getElementById('bt-symbol');
     const btTfSelect = document.getElementById('bt-timeframe');
+    const btLbSelect = document.getElementById('bt-lookback');
+    if (btTfSelect) updateBacktestLookbackOptions(btTfSelect.value);
     if (btSymSelect) btSymSelect.addEventListener('change', () => loadBacktestCandlesAndTrades());
-    if (btTfSelect) btTfSelect.addEventListener('change', () => loadBacktestCandlesAndTrades());
-
-    // Lot Sizing Mode toggle (Dynamic vs Custom)
-    const lotModeSelect = document.getElementById('bt-lot-mode');
-    const customLotGroup = document.getElementById('bt-custom-lot-group');
-    if (lotModeSelect && customLotGroup) {
-      lotModeSelect.addEventListener('change', () => {
-        customLotGroup.style.display = lotModeSelect.value === 'custom' ? 'block' : 'none';
+    if (btTfSelect) {
+      btTfSelect.addEventListener('change', () => {
+        updateBacktestLookbackOptions(btTfSelect.value);
+        loadBacktestCandlesAndTrades();
       });
     }
+    if (btLbSelect) btLbSelect.addEventListener('change', () => loadBacktestCandlesAndTrades());
 
     runBtn.addEventListener('click', async () => {
       const sym = document.getElementById('bt-symbol').value;
       const strategy = document.getElementById('bt-strategy').value;
       const tf = document.getElementById('bt-timeframe').value;
+      const lb = document.getElementById('bt-lookback')?.value || '2y';
       const cap = parseFloat(document.getElementById('bt-capital').value) || 10000;
       const risk = parseFloat(document.getElementById('bt-risk').value) || 1.0;
       const sl = parseFloat(document.getElementById('bt-sl').value) || 1.5;
@@ -870,26 +1411,43 @@
       const leverage = parseFloat(document.getElementById('bt-leverage')?.value) || 100.0;
       let maxMargin = parseFloat(document.getElementById('bt-max-margin')?.value) || 50.0;
       if (maxMargin > 50.0) maxMargin = 50.0; // Enforce strict 50% cap
-      const lotMode = document.getElementById('bt-lot-mode')?.value || 'dynamic';
-      const customLot = parseFloat(document.getElementById('bt-custom-lot')?.value) || 0.10;
+      const lotSize = parseFloat(document.getElementById('bt-lot-size')?.value) || 0.10;
+      const commission = parseFloat(document.getElementById('bt-commission')?.value) || 0.0;
+      const slippage = parseFloat(document.getElementById('bt-slippage')?.value) || 0.0;
+
+      state.lastBacktestParams = {
+        sym: sym,
+        strategy: strategy,
+        tf: tf,
+        lookback: lb,
+        lotSize: lotSize,
+        sl: sl,
+        tp: tp,
+        commission: commission,
+        slippage: slippage,
+      };
 
       runBtn.disabled = true;
       runBtn.innerHTML = `<span>⏳ Simulating...</span>`;
-      showToast(`Simulating ${strategy} on ${sym} (1:${Math.round(leverage)} lev, ≤${maxMargin}% margin)...`);
+      showToast(`Simulating ${strategy} on ${sym} [${lb.toUpperCase()}] (Lots: ${lotSize.toFixed(2)}, Comm: $${commission}/L, Slip: ${slippage}p)...`);
 
       try {
         const query = new URLSearchParams({
           symbol: sym,
           strategy: strategy,
           timeframe: tf,
+          lookback: lb,
           initial_capital: cap,
           risk_pct: risk,
           sl_multiplier: sl,
           tp_multiplier: tp,
           leverage: leverage,
           max_margin_pct: maxMargin,
-          lot_mode: lotMode,
-          custom_lot_size: customLot,
+          lot_mode: 'fixed',
+          lot_size: lotSize,
+          custom_lot_size: lotSize,
+          commission_per_lot: commission,
+          slippage: slippage,
         });
 
         const res = await apiFetch(`/api/backtest/run?${query.toString()}`);
@@ -907,17 +1465,29 @@
 
         document.getElementById('kpi-winrate').textContent = `${(m.win_rate_pct || 0).toFixed(1)}%`;
         document.getElementById('kpi-pf').textContent = (m.profit_factor || 0).toFixed(2);
+
+        const avgWinElem = document.getElementById('kpi-avg-win');
+        if (avgWinElem) avgWinElem.textContent = `+$${fmtNumber(Number(m.avg_win || 0).toFixed(2))}`;
+
+        const avgLossElem = document.getElementById('kpi-avg-loss');
+        if (avgLossElem) avgLossElem.textContent = `-$${fmtNumber(Number(m.avg_loss || 0).toFixed(2))}`;
+
+        const wlRatioElem = document.getElementById('kpi-wl-ratio');
+        if (wlRatioElem) wlRatioElem.textContent = `${Number(m.win_loss_ratio || 0).toFixed(2)}x`;
+
+        const totalCommElem = document.getElementById('kpi-total-comm');
+        if (totalCommElem) totalCommElem.textContent = `-$${fmtNumber(Number(m.total_fees || m.total_commission || 0).toFixed(2))}`;
+
         document.getElementById('kpi-max-dd').textContent = `${(m.max_drawdown_pct || 0).toFixed(2)}%`;
         document.getElementById('kpi-total-trades').textContent = m.total_trades || 0;
 
         const levElem = document.getElementById('kpi-leverage-cap');
         if (levElem) levElem.textContent = `${m.leverage || '1:100'} (≤${m.max_margin_cap_pct || 50}%)`;
 
-        const peakMarginElem = document.getElementById('kpi-peak-margin');
-        if (peakMarginElem) {
-          const pm = m.peak_margin_used_pct || 0.0;
-          peakMarginElem.textContent = `${pm.toFixed(1)}%`;
-          peakMarginElem.style.color = pm <= 50.0 ? 'var(--emerald)' : 'var(--red)';
+        const posSizeElem = document.getElementById('kpi-pos-size');
+        if (posSizeElem) {
+          const lots = m.position_size_lots || m.lot_size || m.custom_lot_size || lotSize;
+          posSizeElem.textContent = `${Number(lots).toFixed(2)}L (Constant)`;
         }
 
         // Render Equity Curve via SVG
@@ -926,8 +1496,8 @@
         // Load candles and plot trade markers on chart
         await loadBacktestCandlesAndTrades();
 
-        // Render Trade Cards Log with Time & Lot Size (Zero Tables)
-        renderTradeCards(res.trades || []);
+        // Render Trade Cards Log with Time, Lot Size & Commission Distribution
+        renderTradeCards(res.trades || [], m);
 
         showToast(`Simulation complete: ${m.total_trades || 0} trades executed & plotted on chart.`);
       } catch (err) {
@@ -938,6 +1508,13 @@
         runBtn.innerHTML = `<span>⚡ Run Simulation</span>`;
       }
     });
+
+    const pineBtn = document.getElementById('btn-export-pinescript');
+    if (pineBtn) {
+      pineBtn.addEventListener('click', () => {
+        openPineScriptModal();
+      });
+    }
   }
 
   function renderEquityCurve(curve) {
@@ -992,14 +1569,16 @@
     `;
   }
 
-  // ─── Trade Cards Log (Time & Lot Size, Zero Tables) ─────────────────
-  function renderTradeCards(trades) {
+  // ─── Trade Cards Log & Commission Distribution Breakdown ───────────
+  function renderTradeCards(trades, metrics) {
     const list = document.getElementById('trade-cards-list');
     const counter = document.getElementById('trade-log-counter');
+    const banner = document.getElementById('comm-dist-banner');
     if (!list) return;
 
     if (!trades || trades.length === 0) {
       if (counter) counter.textContent = '0 trades';
+      if (banner) banner.style.display = 'none';
       list.innerHTML = `
         <div style="padding: 24px; text-align: center; color: var(--txt3);">
           Zero trades executed under current parameters. Try adjusting risk or timeframe.
@@ -1008,6 +1587,50 @@
     }
 
     if (counter) counter.textContent = `${trades.length} trades recorded`;
+
+    // Populate Commission vs P&L Distribution Banner
+    if (banner && metrics) {
+      banner.style.display = 'block';
+      const grossPnl = Number(metrics.total_gross_pnl !== undefined ? metrics.total_gross_pnl : metrics.net_profit || 0);
+      const commVal = Number(metrics.total_fees !== undefined ? metrics.total_fees : metrics.total_commission || 0);
+      const netPnl = Number(metrics.net_profit || 0);
+      const impactPct = Number(metrics.commission_impact_pct || 0);
+
+      const grossElem = document.getElementById('dist-gross-pnl');
+      if (grossElem) {
+        grossElem.textContent = `${grossPnl >= 0 ? '+' : ''}$${fmtNumber(grossPnl.toFixed(2))}`;
+        grossElem.style.color = grossPnl >= 0 ? 'var(--emerald)' : 'var(--red)';
+      }
+
+      const commElem = document.getElementById('dist-total-comm');
+      if (commElem) commElem.textContent = `-$${fmtNumber(commVal.toFixed(2))}`;
+
+      const netElem = document.getElementById('dist-net-pnl');
+      if (netElem) {
+        netElem.textContent = `${netPnl >= 0 ? '+' : ''}$${fmtNumber(netPnl.toFixed(2))}`;
+        netElem.style.color = netPnl >= 0 ? 'var(--emerald)' : 'var(--red)';
+      }
+
+      const dragElem = document.getElementById('dist-fee-drag');
+      if (dragElem) dragElem.textContent = `${impactPct.toFixed(1)}% of gross`;
+
+      // Distribution Bar
+      const totalMag = Math.max(0.01, Math.abs(grossPnl) + commVal);
+      const commWidthPct = Math.min(95, Math.max(commVal > 0 ? 5 : 0, Math.round((commVal / totalMag) * 100)));
+      const netWidthPct = 100 - commWidthPct;
+
+      const netBar = document.getElementById('dist-bar-net');
+      if (netBar) {
+        netBar.style.width = `${netWidthPct}%`;
+        netBar.style.background = netPnl >= 0 ? '#10B981' : '#EF4444';
+        netBar.title = `Net P&L: $${netPnl.toFixed(2)} (${netWidthPct}%)`;
+      }
+      const commBar = document.getElementById('dist-bar-comm');
+      if (commBar) {
+        commBar.style.width = `${commWidthPct}%`;
+        commBar.title = `Total Commission: -$${commVal.toFixed(2)} (${commWidthPct}%)`;
+      }
+    }
 
     list.innerHTML = trades.slice().reverse().map((t, idx) => {
       const isWin = (t.pnl || 0) >= 0;
@@ -1018,25 +1641,51 @@
 
       return `
         <div class="trade-card-row" style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px;">
-          <!-- Top Row: ID, Direction, Lots, and PnL -->
+          <!-- Top Row: ID, Direction, Lots, Margin Used, Fees and Net PnL -->
           <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
               <span class="trade-card-badge" style="background: ${badgeBg}; color: ${badgeColor}; font-weight: 700;">
                 #${t.id || (idx + 1)} ${t.direction}
               </span>
               <span class="strat-param-tag" style="background: rgba(59,130,246,0.18); color: var(--blue); font-weight: 700;">
-                Lot Size: ${Number(t.lots || 0.01).toFixed(2)} Lots
+                ${Number(t.lots || 0.10).toFixed(2)} Lots
               </span>
-              <span class="strat-param-tag" style="background: rgba(16,185,129,0.14); color: var(--emerald); font-weight: 600;">
-                Margin: $${fmtNumber(Math.round(t.margin_used || 0))} (${Number(t.margin_pct || 0).toFixed(1)}%)
+              <span class="strat-param-tag" style="background: rgba(16,185,129,0.20); color: #10B981; font-weight: 700; border: 1px solid rgba(16,185,129,0.40);">
+                💳 Margin Used: $${fmtNumber(Number(t.margin_used || 0).toFixed(2))} (${Number(t.margin_pct || 0).toFixed(1)}%)
               </span>
+              ${(t.commission > 0 || t.slippage_cost > 0) ? `
+              <span class="strat-param-tag" style="background: rgba(245,158,11,0.15); color: #F59E0B; font-weight: 600; border: 1px solid rgba(245,158,11,0.30);">
+                Commission: -$${Number(t.commission || 0).toFixed(2)}
+              </span>` : ''}
               <span style="font-size: 0.72rem; color: var(--txt2); font-family: var(--mono);">
                 ${t.reason || 'Take Profit'}
               </span>
             </div>
 
-            <div style="font-weight: 700; font-size: 0.88rem; color: ${pnlColor}; font-family: var(--mono);">
+            <div style="font-weight: 700; font-size: 0.88rem; color: ${pnlColor}; font-family: var(--mono); text-align: right;">
               ${isWin ? '+' : ''}$${Number(t.pnl || 0).toFixed(2)} (${fmtPct(t.return_pct)})
+            </div>
+          </div>
+
+          <!-- Middle Row: Distribution of P&L in Accordance to Commission -->
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 0.72rem; font-family: var(--mono); background: rgba(0,0,0,0.22); padding: 6px 12px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.04);">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="color: var(--txt3); font-weight: 600;">P&L Distribution:</span>
+              <span>Gross: <strong style="color: ${Number(t.gross_pnl || t.pnl || 0) >= 0 ? 'var(--emerald)' : 'var(--red)'};">${Number(t.gross_pnl || t.pnl || 0) >= 0 ? '+' : ''}$${Number(t.gross_pnl || t.pnl || 0).toFixed(2)}</strong></span>
+              <span>&minus;</span>
+              <span>Comm: <strong style="color: var(--amber);">-$${Number(t.commission || 0).toFixed(2)}</strong></span>
+              ${t.slippage_cost > 0 ? `<span>&minus;</span><span>Slip: <strong style="color: var(--amber);">-$${Number(t.slippage_cost || 0).toFixed(2)}</strong></span>` : ''}
+              <span>=</span>
+              <span>Net: <strong style="color: ${isWin ? 'var(--emerald)' : 'var(--red)'}; font-weight: 700;">${isWin ? '+' : ''}$${Number(t.pnl || 0).toFixed(2)}</strong></span>
+            </div>
+
+            <!-- Trade-level Distribution Bar -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <div style="width: 65px; height: 5px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; display: flex;">
+                <div style="height: 100%; width: ${Math.max(10, 100 - Math.min(90, Math.round(t.fee_pct || 0)))}%; background: ${isWin ? '#10B981' : '#EF4444'};"></div>
+                <div style="height: 100%; width: ${Math.min(90, Math.round(t.fee_pct || 0))}%; background: #F59E0B;"></div>
+              </div>
+              <span style="color: var(--txt3); font-size: 0.66rem;">${Number(t.fee_pct || 0).toFixed(1)}% comm</span>
             </div>
           </div>
 
@@ -1058,6 +1707,70 @@
     }).join('');
   }
 
+  // ─── Modal & Pine Script Helpers ────────────────────────────────────
+  function openPineScriptModal() {
+    const p = state.lastBacktestParams;
+    const code = generatePineScript(p.sym, p.strategy, p.tf, p.lotSize, p.sl, p.tp);
+    const textarea = document.getElementById('pinescript-textarea');
+    if (textarea) textarea.textContent = code;
+    const modal = document.getElementById('modal-pinescript');
+    if (modal) modal.classList.add('open');
+  }
+
+  function closePineScriptModal() {
+    const modal = document.getElementById('modal-pinescript');
+    if (modal) modal.classList.remove('open');
+  }
+
+  function openIngestionModal() {
+    const modal = document.getElementById('modal-ingestion-log');
+    if (modal) {
+      modal.classList.add('open');
+      loadIngestionLogs();
+    }
+  }
+
+  function closeIngestionModal() {
+    const modal = document.getElementById('modal-ingestion-log');
+    if (modal) modal.classList.remove('open');
+  }
+
+  async function loadIngestionLogs() {
+    const list = document.getElementById('ingestion-log-list');
+    if (!list) return;
+    try {
+      const res = await apiFetch('/api/ingestion-log?limit=30');
+      const logs = res.log || res.logs || [];
+      if (logs.length === 0) {
+        list.innerHTML = `<div style="text-align:center; padding: 24px; color:var(--txt3);">No ingestion requests logged yet.</div>`;
+        return;
+      }
+      list.innerHTML = logs.map(l => {
+        const isSuccess = l.status === 'success';
+        const isRunning = l.status === 'running';
+        const statusClass = isSuccess ? 'log-status-success' : (isRunning ? 'log-status-running' : 'log-status-error');
+        const dateRange = (l.date_from && l.date_to) ? `${l.date_from.substring(0, 10)} ➔ ${l.date_to.substring(0, 10)}` : 'Full Archive';
+        return `
+          <div class="log-item-row">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span class="log-status-badge ${statusClass}">${l.status}</span>
+              <span style="font-weight:700; color:var(--txt); font-family:var(--mono);">${l.symbol} (${l.timeframe || '1m'})</span>
+              <span style="font-size:0.72rem; color:var(--txt2); font-family:var(--mono); background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px;">${l.source}</span>
+              <span style="font-size:0.72rem; color:var(--txt3); font-family:var(--mono);">${dateRange}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; font-family:var(--mono); font-size:0.73rem;">
+              <span style="color:var(--emerald);">+${fmtNumber(l.bars_inserted || 0)} bars</span>
+              <span style="color:var(--txt3);">${l.started_at ? l.started_at.substring(0, 19).replace('T', ' ') : '—'}</span>
+              ${isSuccess ? `<button class="pill-btn" style="font-size:0.68rem; padding: 3px 8px; border-color: rgba(16,185,129,0.4); color: var(--emerald);" onclick="window.viewInOurLibrary('${l.symbol}', '${l.timeframe || '1m'}')">📊 View in Our Library</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      list.innerHTML = `<div style="text-align:center; padding: 20px; color:var(--red);">Error loading logs: ${e.message}</div>`;
+    }
+  }
+
   // ─── Global Sync & Refresh ──────────────────────────────────────────
   function setupGlobalEvents() {
     const syncBtn = document.getElementById('btn-sync-feed');
@@ -1065,7 +1778,7 @@
       syncBtn.addEventListener('click', async () => {
         syncBtn.disabled = true;
         syncBtn.textContent = '🔄 Syncing...';
-        showToast('Syncing 2-year Infoway market bars...');
+        showToast('Syncing market data feed...');
 
         try {
           await apiFetch('/api/sync?days_back=7');
@@ -1080,6 +1793,80 @@
         }
       });
     }
+
+    // Ingestion Modal triggers
+    const openLogBtn = document.getElementById('btn-open-ingestion-log');
+    if (openLogBtn) openLogBtn.addEventListener('click', openIngestionModal);
+
+    const closeLogBtn = document.getElementById('btn-close-log-modal');
+    if (closeLogBtn) closeLogBtn.addEventListener('click', closeIngestionModal);
+
+    const refreshLogBtn = document.getElementById('btn-refresh-log');
+    if (refreshLogBtn) refreshLogBtn.addEventListener('click', loadIngestionLogs);
+
+    // Quick HistData Fetch submission
+    const submitFetchBtn = document.getElementById('btn-submit-fetch');
+    if (submitFetchBtn) {
+      submitFetchBtn.addEventListener('click', async () => {
+        const pair = document.getElementById('fetch-pair')?.value || 'EURUSD';
+        const year = parseInt(document.getElementById('fetch-year')?.value) || 2024;
+        const monthVal = document.getElementById('fetch-month')?.value;
+        const month = monthVal ? parseInt(monthVal) : null;
+
+        submitFetchBtn.disabled = true;
+        submitFetchBtn.innerHTML = `<span>⏳ Ingesting...</span>`;
+        showToast(`Requesting HistData 1m for ${pair} (${year}${month ? '/' + month : ''})...`);
+
+        try {
+          const query = new URLSearchParams({ symbol: pair, year: year });
+          if (month) query.append('month', month);
+
+          const res = await apiFetch(`/api/fetch/histdata?${query.toString()}`, { method: 'POST' });
+          if (res.status === 'success') {
+            showToast(`Success! Ingested ${fmtNumber(res.bars_inserted || 0)} 1m bars for ${pair}.`);
+            closeIngestionModal();
+            switchToOurLibraryWithData(pair, '1m');
+          } else {
+            showToast(`Ingestion error: ${res.error || res.message || 'Check logs'}`);
+          }
+          await loadIngestionLogs();
+        } catch (err) {
+          showToast(`Ingestion failed: ${err.message}`);
+        } finally {
+          submitFetchBtn.disabled = false;
+          submitFetchBtn.innerHTML = `<span>📥 Start Ingestion</span>`;
+        }
+      });
+    }
+
+    // Pine Script Modal triggers
+    const closePineBtn = document.getElementById('btn-close-pine-modal');
+    if (closePineBtn) closePineBtn.addEventListener('click', closePineScriptModal);
+
+    const copyPineBtn = document.getElementById('btn-copy-pinescript');
+    if (copyPineBtn) {
+      copyPineBtn.addEventListener('click', () => {
+        const text = document.getElementById('pinescript-textarea')?.textContent || '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            showToast('Pine Script v5 copied to clipboard!');
+          }).catch(() => {
+            showToast('Copied to clipboard.');
+          });
+        } else {
+          showToast('Copied to clipboard.');
+        }
+      });
+    }
+
+    // Close modals on backdrop click
+    document.querySelectorAll('.hub-modal-overlay').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('open');
+        }
+      });
+    });
   }
 
   // ─── Initialization ─────────────────────────────────────────────────
@@ -1089,14 +1876,6 @@
     const currentPath = window.location.pathname;
     const initialTab = ROUTE_MAP[currentPath] || 'main';
     switchTab(initialTab);
-
-    ensureChartsReady(() => {
-      if (initialTab === 'main') {
-        loadMainCandleData();
-      } else if (initialTab === 'backtest') {
-        loadBacktestCandlesAndTrades();
-      }
-    });
   }
 
   if (document.readyState === 'loading') {

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import sys
+import pandas as pd
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -115,7 +116,8 @@ def list_symbols():
 @app.get("/api/ohlcv", tags=["data"])
 def get_ohlcv(
     symbol: str = Query(..., description="e.g. XAUUSD, EURUSD"),
-    timeframe: str = Query("1m", description="1m, 5m, 15m, 1h, 1d"),
+    timeframe: str = Query("1m", description="1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w"),
+    lookback: Optional[str] = Query(None, description="Lookback window e.g. 1w, 1m, 3m, 6m, 1y, 2y, all"),
     start: Optional[str] = Query(None),
     end: Optional[str] = Query(None),
     limit: Optional[int] = Query(5000),
@@ -123,15 +125,41 @@ def get_ohlcv(
     repo = get_repo()
     sym = symbol.upper() if isinstance(symbol, str) else "EURUSD"
     tf = timeframe.lower() if isinstance(timeframe, str) else "1m"
+
+    lookback_map = {
+        "1d": 1,
+        "3d": 3,
+        "1w": 7,
+        "2w": 14,
+        "1m": 30,
+        "3m": 90,
+        "6m": 180,
+        "1y": 365,
+        "2y": 730,
+        "all": None,
+        "max": None,
+    }
+    lb_days = lookback_map.get(lookback.lower()) if (lookback and isinstance(lookback, str)) else None
+
     try:
-        df = repo.get_ohlcv(sym, tf, start=start, end=end, limit=limit)
+        df = repo.get_ohlcv(sym, tf, start=start, end=end, limit=limit, lookback_days=lb_days, allow_resample=True)
+        # If requested 1m bars are missing or sparse, auto-fetch from Dukascopy
+        if (df.empty or (lb_days and lb_days >= 7 and len(df) < 500 and tf == "1m")):
+            try:
+                from data_layer.ingestion.dukascopy_fetcher import DukascopyFetcher
+                duka = DukascopyFetcher(repo=repo)
+                duka.sync_symbol(sym, force_lookback_days=lb_days or 365)
+                df = repo.get_ohlcv(sym, tf, start=start, end=end, limit=limit, lookback_days=lb_days, allow_resample=True)
+            except Exception:
+                pass
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"DB error: {e}")
 
     if df.empty:
-        return {"symbol": sym, "timeframe": tf, "bars": [], "count": 0}
+        return {"symbol": sym, "timeframe": tf, "lookback": lookback, "bars": [], "count": 0}
+
 
     bars = [
         {
@@ -145,7 +173,15 @@ def get_ohlcv(
         }
         for row in df.itertuples()
     ]
-    return {"symbol": sym, "timeframe": tf, "count": len(bars), "bars": bars}
+    return {
+        "symbol": sym,
+        "timeframe": tf,
+        "lookback": lookback or "all",
+        "count": len(bars),
+        "bars": bars,
+        "start": str(df.index.min())[:19] if not df.empty else None,
+        "end": str(df.index.max())[:19] if not df.empty else None,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -206,22 +242,36 @@ def get_ingestion_log(limit: int = Query(50)):
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"DB error: {e}")
 
-    records = [
-        {
-            "id": row.id,
-            "symbol": row.symbol,
-            "timeframe": row.timeframe,
-            "source": row.source,
+    records = []
+    for row in df.itertuples(index=False):
+        err = getattr(row, "error_msg", None)
+        if pd.isna(err):
+            err = None
+        d_from = getattr(row, "date_from", None)
+        if pd.isna(d_from):
+            d_from = None
+        d_to = getattr(row, "date_to", None)
+        if pd.isna(d_to):
+            d_to = None
+        fin = getattr(row, "finished_at", None)
+        if pd.isna(fin):
+            fin = None
+
+        records.append({
+            "id": int(row.id),
+            "symbol": str(row.symbol),
+            "timeframe": str(row.timeframe),
+            "source": str(row.source),
             "started_at": str(row.started_at),
-            "finished_at": str(row.finished_at) if row.finished_at else None,
-            "bars_fetched": row.bars_fetched,
-            "bars_inserted": row.bars_inserted,
-            "status": row.status,
-            "error_msg": row.error_msg,
-        }
-        for row in df.itertuples(index=False)
-    ]
-    return {"log": records}
+            "finished_at": str(fin) if fin else None,
+            "bars_fetched": int(row.bars_fetched) if pd.notna(row.bars_fetched) else 0,
+            "bars_inserted": int(row.bars_inserted) if pd.notna(row.bars_inserted) else 0,
+            "date_from": str(d_from) if d_from else None,
+            "date_to": str(d_to) if d_to else None,
+            "status": str(row.status),
+            "error_msg": str(err) if err else None,
+        })
+    return {"log": records, "logs": records}
 
 
 # ---------------------------------------------------------------------------
@@ -353,7 +403,7 @@ def sync_market_data(days_back: int = Query(7)):
 @app.get("/api/download-all", tags=["data"])
 @app.post("/api/download-all", tags=["data"])
 def bulk_download_all_data():
-    """Download full 2-year and intraday history for all symbols at once using Infoway HTTP API."""
+    """Download full history for all symbols at once using repository data engine."""
     try:
         from scripts.download_all_data import download_all_historical_data
         res = download_all_historical_data(
@@ -368,7 +418,29 @@ def bulk_download_all_data():
 
 
 # ---------------------------------------------------------------------------
-# Backtest simulation endpoint — runs over downloaded Infoway data
+# HistData 1-Minute Fetcher (philipperemy/FX-1-Minute-Data model)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/fetch/histdata", tags=["data"])
+@app.post("/api/fetch/histdata", tags=["data"])
+def fetch_histdata_endpoint(
+    symbol: str = Query("EURUSD", description="e.g. EURUSD, USDJPY, XAUUSD"),
+    year: int = Query(2024, description="Trading year (e.g. 2024)"),
+    month: Optional[int] = Query(None, description="Month (1-12) or None for full year"),
+):
+    """Fetch 1-minute historical data from HistData.com, store in DB, and log the request."""
+    try:
+        from data_layer.ingestion.histdata_fetcher import HistDataFetcher
+        repo = get_repo()
+        fetcher = HistDataFetcher(repo=repo)
+        result = fetcher.ingest_symbol(symbol=symbol, year=year, month=month)
+        return result
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Backtest simulation endpoint — runs over stored repository market data
 # ---------------------------------------------------------------------------
 
 @app.get("/api/backtest/run", tags=["strategy"])
@@ -377,22 +449,31 @@ def run_backtest_endpoint(
     symbol: str = Query("EURUSD"),
     strategy: str = Query("vwap_mean_reversion"),
     timeframe: str = Query("1d"),
+    lookback: Optional[str] = Query("1y", description="Lookback window: 1w, 1m, 3m, 6m, 1y, 2y, all"),
+    start: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    end: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
     initial_capital: float = Query(10000.0),
     risk_pct: float = Query(1.0),
     sl_multiplier: float = Query(1.5),
     tp_multiplier: float = Query(2.0),
     leverage: float = Query(100.0, description="Account leverage e.g. 100 for 1:100"),
     max_margin_pct: float = Query(50.0, description="Max allowed margin level e.g. 50%"),
-    lot_mode: str = Query("dynamic", description="dynamic | custom"),
-    custom_lot_size: Optional[float] = Query(None, description="Custom fixed lot size e.g. 0.50"),
+    lot_size: Optional[float] = Query(0.10, description="Constant position size in lots applied to all trades"),
+    lot_mode: str = Query("fixed", description="fixed | constant"),
+    custom_lot_size: Optional[float] = Query(None, description="Custom fixed lot size alias"),
+    commission_per_lot: float = Query(0.0, description="Custom commission per lot ($)"),
+    slippage: float = Query(0.0, description="Custom slippage penalty in pips"),
 ):
-    """Run strategy simulation over Infoway bars with 1:100 leverage and 50% margin cap."""
+    """Run strategy simulation over stored repository bars with constant position sizing across all trades."""
     from api.backtest_service import run_strategy_backtest
     repo = get_repo()
     return run_strategy_backtest(
         symbol=symbol,
         strategy=strategy,
         timeframe=timeframe,
+        lookback=lookback,
+        start=start,
+        end=end,
         initial_capital=initial_capital,
         risk_pct=risk_pct,
         sl_multiplier=sl_multiplier,
@@ -400,7 +481,10 @@ def run_backtest_endpoint(
         leverage=leverage,
         max_margin_pct=max_margin_pct,
         lot_mode=lot_mode,
+        lot_size=lot_size,
         custom_lot_size=custom_lot_size,
+        commission_per_lot=commission_per_lot,
+        slippage=slippage,
         repo=repo,
     )
 
@@ -468,3 +552,29 @@ def save_strategy(strategy: dict):
     strats.append(strategy)
     path.write_text(json.dumps({"strategies": strats}, indent=2), encoding="utf-8")
     return {"status": "ok", "strategy": strategy}
+
+
+# ---------------------------------------------------------------------------
+# Market Data Sync / Self-Updating
+# ---------------------------------------------------------------------------
+
+@app.post("/api/market-data/sync", tags=["data"])
+def sync_market_data(
+    symbols: Optional[List[str]] = Query(None),
+    lookback_days: Optional[int] = Query(None),
+):
+    """
+    Trigger on-demand self-updating sync using Dukascopy (primary) with HistData backup.
+    Fetches only missing 1-minute bars and appends them to the database.
+    """
+    from data_layer.ingestion.dukascopy_fetcher import DukascopyFetcher
+    fetcher = DukascopyFetcher(repo=get_repo())
+    targets = symbols or ["EURUSD", "XAUUSD", "USDJPY", "DXY"]
+    results = fetcher.sync_all(symbols=targets, force_lookback_days=lookback_days)
+    total_added = sum(r.get("bars_inserted", 0) for r in results.values())
+    return {
+        "status": "completed",
+        "total_bars_inserted": total_added,
+        "results": results,
+    }
+

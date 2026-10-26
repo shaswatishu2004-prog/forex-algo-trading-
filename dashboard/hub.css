@@ -832,3 +832,142 @@ body {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* ─── Ingestion Log & Pine Script Modals ─── */
+.hub-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+  padding: 20px;
+}
+
+.hub-modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hub-modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--r-md);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+  width: 100%;
+  max-width: 860px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateY(20px);
+  transition: transform 0.22s ease;
+}
+
+.hub-modal-overlay.open .hub-modal-card {
+  transform: translateY(0);
+}
+
+.hub-modal-header {
+  padding: 16px 22px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hub-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--txt);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hub-modal-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--txt2);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.hub-modal-close-btn:hover {
+  color: var(--txt);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hub-modal-body {
+  padding: 22px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hub-code-block {
+  background: #040508;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 16px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: #38BDF8;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  max-height: 420px;
+  line-height: 1.6;
+}
+
+.log-item-row {
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: border-color 0.15s ease;
+}
+
+.log-item-row:hover {
+  border-color: var(--border-hi);
+}
+
+.log-status-badge {
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+
+.log-status-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--emerald);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.log-status-running {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--blue);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.log-status-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
